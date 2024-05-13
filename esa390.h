@@ -50,10 +50,14 @@
 #if defined(_M_X64) || defined( __SSE2__ )
                  __m128i v;            /* SIMD 128 bit vector   */
 #endif
-                 U64     d[2];           /* Unsigned double words (2x64b) */
-                 U32     f[4];           /* Unsigned words        (4x32b) */
-                 U16     h[8];           /* Unsigned halfwords    (8x16b) */
-                 U8      b[16];          /* Unsigned bytes        (16x8b) */
+                 U64     ud[2];           /* Unsigned double words (2x64b) */
+                 U32     uf[4];           /* Unsigned words        (4x32b) */
+                 U16     uh[8];           /* Unsigned halfwords    (8x16b) */
+                 U8      ub[16];          /* Unsigned bytes        (16x8b) */
+                 S64     sd[2];           /* Signed double words   (2x64b) */
+                 S32     sf[4];           /* Signed words          (4x32b) */
+                 S16     sh[8];           /* Signed halfwords      (8x16b) */
+                 S8      sb[16];          /* Signed bytes          (16x8b) */
                } QW;
 
 /*-------------------------------------------------------------------*/
@@ -78,10 +82,14 @@
 #if defined(_M_X64) || defined( __SSE2__ )
                  __m128i v;              /* SIMD 128 bit vector   */
 #endif
-                 U64     d[2];           /* Unsigned double words (2x64b) */
-                 U32     f[4];           /* Unsigned words        (4x32b) */
-                 U16     h[8];           /* Unsigned halfwords    (8x16b) */
-                 U8      b[16];          /* Unsigned bytes        (16x8b) */
+                 U64     ud[2];           /* Unsigned double words (2x64b) */
+                 U32     uf[4];           /* Unsigned words        (4x32b) */
+                 U16     uh[8];           /* Unsigned halfwords    (8x16b) */
+                 U8      ub[16];          /* Unsigned bytes        (16x8b) */
+                 S64     sd[2];           /* Signed double words   (2x64b) */
+                 S32     sf[4];           /* Signed words          (4x32b) */
+                 S16     sh[8];           /* Signed halfwords      (8x16b) */
+                 S8      sb[16];          /* Signed bytes          (16x8b) */
                } QW;
 
 #endif

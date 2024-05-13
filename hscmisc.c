@@ -1975,10 +1975,10 @@ int display_vregs( REGS* regs, char* buf, int buflen, char* hdr )
         bufl += idx_snprintf(bufl, buf, buflen,
             "%sVR%02d=%016" PRIx64 ".%016" PRIx64" VR%02d=%016" PRIx64 ".%016" PRIx64 "\n",
             cpustr,
-            i,   regs->VR_D( i,   0),
-                 regs->VR_D( i,   1),
-            i+1, regs->VR_D( i+1, 0),
-                 regs->VR_D( i+1, 1)
+            i,   VR_UD( i,   0),
+                 VR_UD( i,   1),
+            i+1, VR_UD( i+1, 0),
+                 VR_UD( i+1, 1)
             );
     }
     return bufl;

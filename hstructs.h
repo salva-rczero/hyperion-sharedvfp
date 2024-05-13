@@ -208,17 +208,25 @@ struct REGS {                           /* Processor registers       */
 #define FPR_S(_r)    vfp[(_r)].F.HH.F     /* Short, bits 0-31        */
 // fine FPR_T(_r)    vfp[(_r)].F.HH.H.H.H /* Tiny, bits 0-15         */
 
-#define VR_Q(_v)     vfp[(_v)]               /* Quadword             */
+#define VR_Q(_v)     regs->vfp[(_v)]                 /* Quadword             */
 #if defined(WORDS_BIGENDIAN)
-  #define VR_D(_v,_i)  vfp[(_v)].d[(_i)]   /* Doubleword           */
-  #define VR_F(_v,_i)  vfp[(_v)].f[(_i)]   /* Fullword             */
-  #define VR_H(_v,_i)  vfp[(_v)].h[(_i)]   /* Halfword             */
-  #define VR_B(_v,_i)  vfp[(_v)].b[(_i)]   /* Byte                 */
+  #define VR_UD(_v,_i)  regs->vfp[(_v)].ud[(_i)]     /* Unsigned Doubleword  */
+  #define VR_UF(_v,_i)  regs->vfp[(_v)].uf[(_i)]     /* Unsigned Fullword    */
+  #define VR_UH(_v,_i)  regs->vfp[(_v)].uh[(_i)]     /* Unsigned Halfword    */
+  #define VR_UB(_v,_i)  regs->vfp[(_v)].ub[(_i)]     /* Unsigned Byte        */
+  #define VR_SD(_v,_i)  regs->vfp[(_v)].sd[(_i)]     /* Doubleword           */
+  #define VR_SF(_v,_i)  regs->vfp[(_v)].sf[(_i)]     /* Fullword             */
+  #define VR_SH(_v,_i)  regs->vfp[(_v)].sh[(_i)]     /* Halfword             */
+  #define VR_SB(_v,_i)  regs->vfp[(_v)].sb[(_i)]     /* Byte                 */
 #else
-  #define VR_D(_v,_i)  vfp[(_v)].d[1-(_i)]   /* Doubleword           */
-  #define VR_F(_v,_i)  vfp[(_v)].f[3-(_i)]   /* Fullword             */
-  #define VR_H(_v,_i)  vfp[(_v)].h[7-(_i)]   /* Halfword             */
-  #define VR_B(_v,_i)  vfp[(_v)].b[15-(_i)]  /* Byte                 */
+  #define VR_UD(_v,_i)  regs->vfp[(_v)].ud[1-(_i)]   /* Unsigned Doubleword  */
+  #define VR_UF(_v,_i)  regs->vfp[(_v)].uf[3-(_i)]   /* Unsigned Fullword    */
+  #define VR_UH(_v,_i)  regs->vfp[(_v)].uh[7-(_i)]   /* Unsigned Halfword    */
+  #define VR_UB(_v,_i)  regs->vfp[(_v)].ub[15-(_i)]  /* Unsigned Byte        */
+  #define VR_SD(_v,_i)  regs->vfp[(_v)].sd[1-(_i)]   /* Doubleword           */
+  #define VR_SF(_v,_i)  regs->vfp[(_v)].sf[3-(_i)]   /* Fullword             */
+  #define VR_SH(_v,_i)  regs->vfp[(_v)].sh[7-(_i)]   /* Halfword             */
+  #define VR_SB(_v,_i)  regs->vfp[(_v)].sb[15-(_i)]  /* Byte                 */
 #endif
 
         ALIGN_128

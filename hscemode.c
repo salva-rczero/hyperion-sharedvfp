@@ -2644,15 +2644,9 @@ int vr_cmd( int argc, char* argv[], char* cmdline )
 
         if (argc > 1)
         {
-            struct REC
-            {
-                QW      vfp[1];        // Vector registers
-            }
-            rec;
-
-
             int   reg_num;
             BYTE  equal_sign, c;
+            U64   high, low;
 
             if (argc > 2)
             {
@@ -2665,8 +2659,8 @@ int vr_cmd( int argc, char* argv[], char* cmdline )
             if (0
                 || sscanf( argv[1], "%d%c%"SCNx64".%"SCNx64"%c",
                     &reg_num, &equal_sign,
-                    &rec.VR_D(0, 0),
-                    &rec.VR_D(0, 1),
+                    &high,
+                    &low,
                     &c) != 4
                 || reg_num < 0
                 || reg_num > 31
@@ -2679,7 +2673,8 @@ int vr_cmd( int argc, char* argv[], char* cmdline )
                 return 0;
             }
 
-            regs->VR_Q( reg_num ) = rec.VR_Q(0);
+            VR_UD(reg_num, 0) = high;
+            VR_UD(reg_num, 1) = low;
         }
 
         display_vregs( regs, buf, sizeof( buf ), "HHC02266I " );

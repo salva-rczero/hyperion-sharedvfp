@@ -1450,22 +1450,22 @@ static inline void print_fpc_reg( TF02276* rec )
 /*-------------------------------------------------------------------*/
 /*                Print Vector Registers                             */
 /*-------------------------------------------------------------------*/
-static inline void print_vr_regs( TF02266* rec )
+static inline void print_vr_regs( TF02266* regs )
 {
     char tim[64] = {0};         // "YYYY-MM-DD HH:MM:SS.uuuuuu"
     char pfx[64] = {0};         // "16:22:47.745999 HHC02269I CP00:"
 
     int  i;                     // (work for iterating)
 
-    FormatTIMEVAL( &rec->rhdr.tod, tim, sizeof( tim ));
-    MSGBUF( pfx, "%s HHC02266I %s:", &tim[11], ptyp_str( rec->rhdr.cpuad ));
+    FormatTIMEVAL( &regs->rhdr.tod, tim, sizeof( tim ));
+    MSGBUF( pfx, "%s HHC02266I %s:", &tim[11], ptyp_str( regs->rhdr.cpuad ));
 
     for (i = 0; i < 32; i += 2)
     {
         FLOGMSG( stdout, "%s VR%02d=%016" PRIx64 ".%016" PRIx64 " VR%02d=%016" PRIx64 ".%016" PRIx64 "\n",
             pfx,
-            i,     rec->VR_D( i,   0), rec->VR_D( i,   1),
-            i + 1, rec->VR_D( i+1, 0), rec->VR_D( i+1, 1)
+            i,     VR_UD( i,   0), VR_UD( i,   1),
+            i + 1, VR_UD( i+1, 0), VR_UD( i+1, 1)
         );
     }
 

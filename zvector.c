@@ -31,7 +31,7 @@ DEF_INST( vector_load_element_8 )
     ZVECTOR_CHECK( regs );
     PER_ZEROADDR_XCHECK2( regs, x2, b2 );
 
-    regs->VR_B( v1, m3 ) = ARCH_DEP( vfetchb )( effective_addr2, b2, regs );
+    VR_UB( v1, m3 ) = ARCH_DEP( vfetchb )( effective_addr2, b2, regs );
 
     ZVECTOR_END( regs );
 }
@@ -52,7 +52,7 @@ DEF_INST( vector_load_element_16 )
     if (m3 > 7)                    /* M3 > 7 => Specficitcation excp */
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
 
-    regs->VR_H( v1, m3 ) = ARCH_DEP( vfetch2 )( effective_addr2, b2, regs );
+    VR_UH( v1, m3 ) = ARCH_DEP( vfetch2 )( effective_addr2, b2, regs );
 
     ZVECTOR_END( regs );
 }
@@ -73,7 +73,7 @@ DEF_INST( vector_load_element_64 )
     if (m3 > 1)                    /* M3 > 1 => Specficitcation excp */
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
 
-    regs->VR_D( v1, m3 ) = ARCH_DEP( vfetch8 )( effective_addr2, b2, regs );
+    VR_UD( v1, m3 ) = ARCH_DEP( vfetch8 )( effective_addr2, b2, regs );
 
     ZVECTOR_END( regs );
 }
@@ -94,7 +94,7 @@ DEF_INST( vector_load_element_32 )
     if (m3 > 3)                    /* M3 > 3 => Specficitcation excp */
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
 
-    regs->VR_F( v1, m3 ) = ARCH_DEP( vfetch4 )( effective_addr2, b2, regs );
+    VR_UF( v1, m3 ) = ARCH_DEP( vfetch4 )( effective_addr2, b2, regs );
 
     ZVECTOR_END( regs );
 }
@@ -113,19 +113,19 @@ DEF_INST( vector_load_logical_element_and_zero )
     PER_ZEROADDR_XCHECK2( regs, x2, b2 );
 
 #if defined(_M_X64) || defined( __SSE2__ )
-    regs->VR_Q( v1 ).v = _mm_setzero_si128();
+    VR_Q( v1 ).v = _mm_setzero_si128();
 #else
-    regs->VR_D(v1, 0) = 0;
-    regs->VR_D(v1, 1) = 0;
+    VR_UD(v1, 0) = 0;
+    VR_UD(v1, 1) = 0;
 #endif
 
     switch (m3)
     {
-    case 0: regs->VR_B( v1, 7 ) = ARCH_DEP( vfetchb )( effective_addr2, b2, regs ); break;
-    case 1: regs->VR_H( v1, 3 ) = ARCH_DEP( vfetch2 )( effective_addr2, b2, regs ); break;
-    case 2: regs->VR_F( v1, 1 ) = ARCH_DEP( vfetch4 )( effective_addr2, b2, regs ); break;
-    case 3: regs->VR_D( v1, 0 ) = ARCH_DEP( vfetch8 )( effective_addr2, b2, regs ); break;
-    case 6: regs->VR_F( v1, 0 ) = ARCH_DEP( vfetch4 )( effective_addr2, b2, regs ); break;
+    case 0: VR_UB( v1, 7 ) = ARCH_DEP( vfetchb )( effective_addr2, b2, regs ); break;
+    case 1: VR_UH( v1, 3 ) = ARCH_DEP( vfetch2 )( effective_addr2, b2, regs ); break;
+    case 2: VR_UF( v1, 1 ) = ARCH_DEP( vfetch4 )( effective_addr2, b2, regs ); break;
+    case 3: VR_UD( v1, 0 ) = ARCH_DEP( vfetch8 )( effective_addr2, b2, regs ); break;
+    case 6: VR_UF( v1, 0 ) = ARCH_DEP( vfetch4 )( effective_addr2, b2, regs ); break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
         break;
@@ -150,23 +150,23 @@ DEF_INST( vector_load_and_replicate )
     switch (m3)
     {
     case 0:
-        regs->VR_B( v1, 0 ) = ARCH_DEP( vfetchb )( effective_addr2, b2, regs );
+        VR_UB( v1, 0 ) = ARCH_DEP( vfetchb )( effective_addr2, b2, regs );
         for (i=1; i < 16; i++)
-            regs->VR_B( v1, i ) = regs->VR_B( v1, 0 );
+            VR_UB( v1, i ) = VR_UB( v1, 0 );
         break;
     case 1:
-        regs->VR_H( v1, 0 ) = ARCH_DEP( vfetch2 )( effective_addr2, b2, regs );
+        VR_UH( v1, 0 ) = ARCH_DEP( vfetch2 )( effective_addr2, b2, regs );
         for (i=1; i < 8; i++)
-            regs->VR_H( v1, i ) = regs->VR_H( v1, 0 );
+            VR_UH( v1, i ) = VR_UH( v1, 0 );
         break;
     case 2:
-        regs->VR_F( v1, 0 ) = ARCH_DEP( vfetch4 )( effective_addr2, b2, regs );
+        VR_UF( v1, 0 ) = ARCH_DEP( vfetch4 )( effective_addr2, b2, regs );
         for (i=1; i < 4; i++)
-            regs->VR_F( v1, i ) = regs->VR_F( v1, 0 );
+            VR_UF( v1, i ) = VR_UF( v1, 0 );
         break;
     case 3:
-        regs->VR_D( v1, 0 ) = ARCH_DEP( vfetch8 )( effective_addr2, b2, regs );
-        regs->VR_D( v1, 1 ) = regs->VR_D( v1, 0 );
+        VR_UD( v1, 0 ) = ARCH_DEP( vfetch8 )( effective_addr2, b2, regs );
+        VR_UD( v1, 1 ) = VR_UD( v1, 0 );
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -191,7 +191,7 @@ DEF_INST( vector_load )
     ZVECTOR_CHECK( regs );
     PER_ZEROADDR_XCHECK2( regs, x2, b2 );
 
-    regs->VR_Q( v1 ) = ARCH_DEP( vfetch16 )( effective_addr2, b2, regs );
+    VR_Q(v1) = ARCH_DEP( vfetch16 )( effective_addr2, b2, regs );
 
     ZVECTOR_END( regs );
 }
@@ -222,7 +222,7 @@ DEF_INST( vector_load_to_block_boundary )
     ARCH_DEP( vfetchc )( &bytes, length - 1, effective_addr2, b2, regs );
 
     for (i=0; i < length; i++)
-        regs->VR_B( v1, i ) = bytes[i];
+        VR_UB( v1, i ) = bytes[i];
 
     ZVECTOR_END( regs );
 }
@@ -240,7 +240,7 @@ DEF_INST( vector_store_element_8 )
     ZVECTOR_CHECK( regs );
     PER_ZEROADDR_XCHECK2( regs, x2, b2 );
 
-    ARCH_DEP( vstoreb )( regs->VR_B( v1, m3 ), effective_addr2, b2, regs );
+    ARCH_DEP( vstoreb )( VR_UB( v1, m3 ), effective_addr2, b2, regs );
 
     ZVECTOR_END( regs );
 }
@@ -261,7 +261,7 @@ DEF_INST( vector_store_element_16 )
     if (m3 > 7)                    /* M3 > 7 => Specficitcation excp */
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
 
-    ARCH_DEP( vstore2 )( regs->VR_H( v1, m3 ), effective_addr2, b2, regs );
+    ARCH_DEP( vstore2 )( VR_UH( v1, m3 ), effective_addr2, b2, regs );
 
     ZVECTOR_END( regs );
 }
@@ -282,7 +282,7 @@ DEF_INST( vector_store_element_64 )
     if (m3 > 1)                    /* M3 > 1 => Specficitcation excp */
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
 
-    ARCH_DEP( vstore8 )( regs->VR_D( v1, m3 ), effective_addr2, b2, regs );
+    ARCH_DEP( vstore8 )( VR_UD( v1, m3 ), effective_addr2, b2, regs );
 
     ZVECTOR_END( regs );
 }
@@ -303,7 +303,7 @@ DEF_INST( vector_store_element_32 )
     if (m3 > 3)                    /* M3 > 3 => Specficitcation excp */
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
 
-    ARCH_DEP( vstore4 )( regs->VR_F( v1, m3 ), effective_addr2, b2, regs );
+    ARCH_DEP( vstore4 )( VR_UF( v1, m3 ), effective_addr2, b2, regs );
 
     ZVECTOR_END( regs );
 }
@@ -323,7 +323,7 @@ DEF_INST( vector_store )
     ZVECTOR_CHECK( regs );
     PER_ZEROADDR_XCHECK2( regs, x2, b2 );
 
-    ARCH_DEP( vstore16 )( regs->VR_Q( v1 ), effective_addr2, b2, regs );
+    ARCH_DEP( vstore16 )( VR_Q(v1), effective_addr2, b2, regs );
 
     ZVECTOR_END( regs );
 }
@@ -348,12 +348,12 @@ DEF_INST( vector_gather_element_64 )
     if (b2)
         effective_addr2 += regs->GR( b2 );
 
-    effective_addr2 += regs->VR_D( v2, m3 );
+    effective_addr2 += VR_UD( v2, m3 );
     effective_addr2 &= ADDRESS_MAXWRAP( regs );
 
     PER_ZEROADDR_XCHECK( regs, b2 );
 
-    regs->VR_D( v1, m3 ) = ARCH_DEP( vfetch8 )( effective_addr2, b2, regs );
+    VR_UD( v1, m3 ) = ARCH_DEP( vfetch8 )( effective_addr2, b2, regs );
 
     ZVECTOR_END( regs );
 }
@@ -378,12 +378,12 @@ DEF_INST( vector_gather_element_32 )
     if (b2)
         effective_addr2 += regs->GR( b2 );
 
-    effective_addr2 += regs->VR_F( v2, m3 );
+    effective_addr2 += VR_UF( v2, m3 );
     effective_addr2 &= ADDRESS_MAXWRAP( regs );
 
     PER_ZEROADDR_XCHECK( regs, b2 );
 
-    regs->VR_F( v1, m3 ) = ARCH_DEP( vfetch4 )( effective_addr2, b2, regs );
+    VR_UF( v1, m3 ) = ARCH_DEP( vfetch4 )( effective_addr2, b2, regs );
 
     ZVECTOR_END( regs );
 }
@@ -408,12 +408,12 @@ DEF_INST( vector_scatter_element_64 )
     if (b2)
         effective_addr2 += regs->GR( b2 );
 
-    effective_addr2 += regs->VR_D( v2, m3 );
+    effective_addr2 += VR_UD( v2, m3 );
     effective_addr2 &= ADDRESS_MAXWRAP( regs );
 
     PER_ZEROADDR_XCHECK( regs, b2 );
 
-    ARCH_DEP( vstore8 )( regs->VR_D( v1, m3 ), effective_addr2, b2, regs );
+    ARCH_DEP( vstore8 )( VR_UD( v1, m3 ), effective_addr2, b2, regs );
 
     ZVECTOR_END( regs );
 }
@@ -438,12 +438,12 @@ DEF_INST( vector_scatter_element_32 )
     if (b2)
         effective_addr2 += regs->GR( b2 );
 
-    effective_addr2 += regs->VR_F( v2, m3 );
+    effective_addr2 += VR_UF( v2, m3 );
     effective_addr2 &= ADDRESS_MAXWRAP( regs );
 
     PER_ZEROADDR_XCHECK( regs, b2 );
 
-    ARCH_DEP( vstore4 )( regs->VR_F( v1, m3 ), effective_addr2, b2, regs );
+    ARCH_DEP( vstore4 )( VR_UF( v1, m3 ), effective_addr2, b2, regs );
 
     ZVECTOR_END( regs );
 }
@@ -461,10 +461,10 @@ DEF_INST( vector_load_gr_from_vr_element )
 
     switch (m4)
     {
-    case 0: regs->GR( r1 ) = regs->VR_B( v3, d2 ); break;
-    case 1: regs->GR( r1 ) = regs->VR_H( v3, d2 ); break;
-    case 2: regs->GR( r1 ) = regs->VR_F( v3, d2 ); break;
-    case 3: regs->GR( r1 ) = regs->VR_D( v3, d2 ); break;
+    case 0: regs->GR( r1 ) = VR_UB( v3, d2 ); break;
+    case 1: regs->GR( r1 ) = VR_UH( v3, d2 ); break;
+    case 2: regs->GR( r1 ) = VR_UF( v3, d2 ); break;
+    case 3: regs->GR( r1 ) = VR_UD( v3, d2 ); break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
         break;
@@ -489,10 +489,10 @@ DEF_INST( vector_load_vr_element_from_gr )
 
     switch (m4)
     {
-    case 0: regs->VR_B( v1, d2 ) = regs->GR_LHLCL( r3 ); break;
-    case 1: regs->VR_H( v1, d2 ) = regs->GR_LHL  ( r3 ); break;
-    case 2: regs->VR_F( v1, d2 ) = regs->GR_L    ( r3 ); break;
-    case 3: regs->VR_D( v1, d2 ) = regs->GR_G    ( r3 ); break;
+    case 0: VR_UB( v1, d2 ) = regs->GR_LHLCL( r3 ); break;
+    case 1: VR_UH( v1, d2 ) = regs->GR_LHL  ( r3 ); break;
+    case 2: VR_UF( v1, d2 ) = regs->GR_L    ( r3 ); break;
+    case 3: VR_UD( v1, d2 ) = regs->GR_G    ( r3 ); break;
     default:
         break;
     }
@@ -545,22 +545,22 @@ DEF_INST( vector_element_shift_left )
     case 0:
         shift = b2 % 8;
         for (i=0; i < 16; i++)
-            regs->VR_B( v1, i ) = regs->VR_B( v3, i ) << shift;
+            VR_UB( v1, i ) = VR_UB( v3, i ) << shift;
         break;
     case 1:
         shift = b2 % 16;
         for (i=0; i < 8; i++)
-            regs->VR_H( v1, i ) = regs->VR_B( v3, i ) << shift;
+            VR_UH( v1, i ) = VR_UB( v3, i ) << shift;
         break;
     case 2:
         shift = b2 % 32;
         for (i=0; i < 4; i++)
-            regs->VR_F( v1, i ) = regs->VR_F( v3, i ) << shift;
+            VR_UF( v1, i ) = VR_UF( v3, i ) << shift;
         break;
     case 3:
         shift = b2 % 64;
         for (i=0; i < 2; i++)
-            regs->VR_D( v1, i ) = regs->VR_D( v3, i ) << shift;
+            VR_UD( v1, i ) = VR_UD( v3, i ) << shift;
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -588,25 +588,25 @@ DEF_INST( vector_element_rotate_left_logical )
         rotl = b2 % 8;
         rotr = -rotl & 7;
         for (i=0; i < 16; i++)
-            regs->VR_B( v1, i ) = (regs->VR_B( v3, i ) << rotl) | (regs->VR_B( v3, i ) >> rotr);
+            VR_UB( v1, i ) = (VR_UB( v3, i ) << rotl) | (VR_UB( v3, i ) >> rotr);
         break;
     case 1:
         rotl = b2 % 16;
         rotr = -rotl & 15;
         for (i=0; i < 8; i++)
-            regs->VR_H( v1, i ) = (regs->VR_H( v3, i ) << rotl) | (regs->VR_H( v3, i ) >> rotr);
+            VR_UH( v1, i ) = (VR_UH( v3, i ) << rotl) | (VR_UH( v3, i ) >> rotr);
         break;
     case 2:
         rotl = b2 % 32;
         rotr = -rotl & 31;
         for (i=0; i < 4; i++)
-            regs->VR_F( v1, i ) = (regs->VR_F( v3, i ) << rotl) | (regs->VR_F( v3, i ) >> rotr);
+            VR_UF( v1, i ) = (VR_UF( v3, i ) << rotl) | (VR_UF( v3, i ) >> rotr);
         break;
     case 3:
         rotl = b2 % 64;
         rotr = -rotl & 63;
         for (i=0; i < 2; i++)
-            regs->VR_D( v1, i ) = (regs->VR_D( v3, i ) << rotl) | (regs->VR_D( v3, i ) >> rotr);
+            VR_UD( v1, i ) = (VR_UD( v3, i ) << rotl) | (VR_UD( v3, i ) >> rotr);
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -636,7 +636,7 @@ DEF_INST( vector_load_multiple )
 
     for (i=v1; i <= v3; i++)
     {
-        regs->VR_Q( i ) = ARCH_DEP( vfetch16 )( effective_addr2, b2, regs );
+        VR_Q(i) = ARCH_DEP( vfetch16 )( effective_addr2, b2, regs );
         effective_addr2 += 16;
         effective_addr2 &= ADDRESS_MAXWRAP( regs );
     }
@@ -665,7 +665,7 @@ DEF_INST( vector_load_with_length )
     ARCH_DEP( vfetchc )( &temp, min(regs->GR_L(r3), 15), effective_addr2, b2, regs );
     
     for (i=0; i < 16; i++)
-        regs->VR_B(v1, i) = temp[i];
+        VR_UB(v1, i) = temp[i];
 
     ZVECTOR_END( regs );
 }
@@ -687,22 +687,22 @@ DEF_INST( vector_element_shift_right_logical )
     case 0:
         shift = b2 % 8;
         for (i=0; i < 16; i++)
-            regs->VR_B( v1, i ) = regs->VR_B( v3, i ) >> shift;
+            VR_UB( v1, i ) = VR_UB( v3, i ) >> shift;
         break;
     case 1:
         shift = b2 % 16;
         for (i=0; i < 8; i++)
-            regs->VR_H( v1, i ) = regs->VR_H( v3, i ) >> shift;
+            VR_UH( v1, i ) = VR_UH( v3, i ) >> shift;
         break;
     case 2:
         shift = b2 % 32;
         for (i=0; i < 4; i++)
-            regs->VR_F( v1, i ) = regs->VR_F( v3, i ) >> shift;
+            VR_UF( v1, i ) = VR_UF( v3, i ) >> shift;
         break;
     case 3:
         shift = b2 % 64;
         for (i=0; i < 2; i++)
-            regs->VR_D( v1, i ) = regs->VR_D( v3, i ) >> shift;
+            VR_UD( v1, i ) = VR_UD( v3, i ) >> shift;
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -729,22 +729,22 @@ DEF_INST( vector_element_shift_right_arithmetic )
     case 0:
         shift = b2 % 8;
         for (i=0; i < 16; i++)
-            regs->VR_B( v1, i ) = (S8) regs->VR_B( v3, i ) >> shift;
+            VR_SB(v1, i) = VR_SB(v3, i) >> shift;
         break;
     case 1:
         shift = b2 % 16;
         for (i=0; i < 8; i++)
-            regs->VR_H( v1, i ) = (S16) regs->VR_H( v3, i ) >> shift;
+            VR_SH(v1, i) = VR_SH(v3, i) >> shift;
         break;
     case 2:
         shift = b2 % 32;
         for (i=0; i < 4; i++)
-            regs->VR_F( v1, i ) = (S32) regs->VR_F( v3, i ) >> shift;
+            VR_SF(v1, i) = VR_SF(v3, i) >> shift;
         break;
     case 3:
         shift = b2 % 64;
         for (i=0; i < 2; i++)
-            regs->VR_D( v1, i ) = (S64) regs->VR_D( v3, i ) >> shift;
+            VR_SD(v1, i) = VR_SD(v3, i) >> shift;
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -775,7 +775,7 @@ DEF_INST( vector_store_multiple )
 
     for (i=v1; i <= v3; i++)
     {
-        ARCH_DEP( vstore16 )( regs->VR_Q( i ), effective_addr2, b2, regs );
+        ARCH_DEP( vstore16 )( VR_Q(i), effective_addr2, b2, regs );
         effective_addr2 += 16;
         effective_addr2 &= ADDRESS_MAXWRAP( regs );
     }
@@ -803,7 +803,7 @@ DEF_INST( vector_store_with_length )
     len = min(regs->GR_L(r3), 15);
     
     for (i=0; i <= len; i++)
-        temp[i] = regs->VR_B(v1, i);
+        temp[i] = VR_UB(v1, i);
 
     ARCH_DEP( vstorec )( &temp, len , effective_addr2, b2, regs );
     
@@ -821,7 +821,7 @@ DEF_INST( vector_load_element_immediate_8 )
 
     ZVECTOR_CHECK( regs );
     
-    regs->VR_B(v1,m3) = i2 & UCHAR_MAX;
+    VR_UB(v1,m3) = i2 & UCHAR_MAX;
     
     ZVECTOR_END( regs );
 }
@@ -837,7 +837,7 @@ DEF_INST( vector_load_element_immediate_16 )
 
     ZVECTOR_CHECK( regs );
     
-    regs->VR_H(v1, m3) = (S16) i2;
+    VR_SH(v1, m3) = i2;
     
     ZVECTOR_END( regs );
 }
@@ -853,7 +853,7 @@ DEF_INST( vector_load_element_immediate_64 )
 
     ZVECTOR_CHECK( regs );
 
-    regs->VR_D(v1, m3) = (S64) i2;
+    VR_UD(v1, m3) = (S64) i2;
     
     ZVECTOR_END( regs );
 }
@@ -869,7 +869,7 @@ DEF_INST( vector_load_element_immediate_32 )
 
     ZVECTOR_CHECK( regs );
 
-    regs->VR_F(v1, m3) = (S32) i2;
+    VR_SF(v1, m3) = i2;
 
     ZVECTOR_END( regs );
 }
@@ -888,7 +888,7 @@ DEF_INST( vector_generate_byte_mask )
     ZVECTOR_CHECK( regs );
 
     for (i=0; i < 16; i++)
-        regs->VR_B(v1, i) = (i2 & (0x1 << (15 - i))) ? UCHAR_MAX : 0;
+        VR_UB(v1, i) = (i2 & (0x1 << (15 - i))) ? UCHAR_MAX : 0;
 
     ZVECTOR_END( regs );
 }
@@ -908,19 +908,19 @@ DEF_INST( vector_replicate_immediate )
     {
         case 0:
             for (i=0; i < 16; i++)
-                regs->VR_B(v1, i) = (S8) i2;
+                VR_SB(v1, i) = i2;
             break;
         case 1:
             for (i=0; i < 8; i++)
-                regs->VR_H(v1, i) = (S16) i2;
+                VR_SH(v1, i) = i2;
             break;
         case 2:
             for (i=0; i < 4; i++)
-                regs->VR_F(v1, i) = (S32) i2;
+                VR_SF(v1, i) = i2;
             break;
         case 3:
             for (i=0; i < 2; i++)
-                regs->VR_D(v1, i) = (S64) i2;
+                VR_SD(v1, i) = i2;
             break;
         default:
             ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -949,28 +949,28 @@ DEF_INST( vector_generate_mask )
         i3 &= 7;
         bitmask = (i2 <= i3) ? (1u << (8 - i2)) - (1u << (7 - i3)) : UCHAR_MAX - (1u << (7 - i3)) + (1u << (8 - i2));
         for (i=0; i < 16; i++)
-            regs->VR_B(v1, i) = bitmask;
+            VR_UB(v1, i) = bitmask;
         break;
     case 1:
         i2 &= 15;
         i3 &= 15;
         bitmask = (i2 <= i3) ? (1u << (16 - i2)) - (1u << (15 - i3)) : USHRT_MAX - (1u << (15 - i3)) + (1u << (16 - i2));
         for (i=0; i < 8; i++)
-            regs->VR_H(v1, i) = bitmask;
+            VR_UH(v1, i) = bitmask;
         break;
     case 2:
         i2 &= 31;
         i3 &= 31;
         bitmask = (i2 <= i3) ? (1u << (32 - i2)) - (1u << (31 - i3)) : UINT_MAX - (1u << (31 - i3)) + (1u << (32 - i2));
         for (i=0; i < 4; i++)
-            regs->VR_F(v1, i) = bitmask;
+            VR_UF(v1, i) = bitmask;
         break;
     case 3:
         i2 &= 63;
         i3 &= 63;
         bitmask = (i2 <= i3) ? (1ull << (64 - i2)) - (1ull << (63 - i3)) : ULLONG_MAX - (1ull << (63 - i3)) + (1ull << (64 - i2));
         for (i=0; i < 2; i++)
-            regs->VR_D(v1, i) = bitmask;
+            VR_UD(v1, i) = bitmask;
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -1008,36 +1008,36 @@ DEF_INST( vector_fp_test_data_class_immediate )
         max = M5_SE ? 1 : 4;
         for (i=0; i < max; i++)
         {
-            ARCH_DEP( get_float32 )( &f32, &regs->VR_F(v2, i) );
+            ARCH_DEP( get_float32 )( &f32, &VR_UF(v2, i) );
             if ((float32_class(f32) & i3) != 0) {
-                regs->VR_F(v1, i) = UINT_MAX;
+                VR_UF(v1, i) = UINT_MAX;
                 sel++;
             }
-            else regs->VR_F(v1, i) = 0;
+            else VR_UF(v1, i) = 0;
         }
         break;
     case 3:
         max = M5_SE ? 1 : 2;
         for (i=0; i < max; i++)
         {
-            ARCH_DEP( get_float64 )( &f64, &regs->VR_D(v2, i) );
+            ARCH_DEP( get_float64 )( &f64, &VR_UD(v2, i) );
             if ((float64_class(f64) & i3) != 0) {
-                regs->VR_D(v1, i) = ULLONG_MAX;
+                VR_UD(v1, i) = ULLONG_MAX;
                 sel++;
             }
-            else regs->VR_D(v1, i) = 0;
+            else VR_UD(v1, i) = 0;
         }
         break;
     case 4:
-        ARCH_DEP( get_float128 )( &f128, &regs->VR_D(v2, 0), &regs->VR_D(v2, 1) );
+        ARCH_DEP( get_float128 )( &f128, &VR_UD(v2, 0), &VR_UD(v2, 1) );
             if ((float128_class(f128) & i3) != 0) {
-                regs->VR_D(v1, 0) = ULLONG_MAX;
-                regs->VR_D(v1, 1) = ULLONG_MAX;
+                VR_UD(v1, 0) = ULLONG_MAX;
+                VR_UD(v1, 1) = ULLONG_MAX;
                 sel++;
             }
             else {
-                regs->VR_D(v1, 0) = 0;
-                regs->VR_D(v1, 1) = 0;
+                VR_UD(v1, 0) = 0;
+                VR_UD(v1, 1) = 0;
             }
         break;
     default:
@@ -1080,19 +1080,19 @@ DEF_INST( vector_replicate )
     {
     case 0:
         for (i=0; i < 16; i++)
-            regs->VR_B(v1, i) = regs->VR_B(v3, i2);
+            VR_UB(v1, i) = VR_UB(v3, i2);
         break;
     case 1:
         for (i=0; i < 8; i++)
-            regs->VR_H(v1, i) = regs->VR_H(v3, i2);
+            VR_UH(v1, i) = VR_UH(v3, i2);
         break;
     case 2:
         for (i=0; i < 4; i++)
-            regs->VR_F(v1, i) = regs->VR_F(v3, i2);
+            VR_UF(v1, i) = VR_UF(v3, i2);
         break;
     case 3:
         for (i=0; i < 2; i++)
-            regs->VR_D(v1, i) = regs->VR_D(v3, i2);
+            VR_UD(v1, i) = VR_UD(v3, i2);
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -1120,22 +1120,22 @@ DEF_INST( vector_population_count )
     {
     case 0:
         for (i=0; i < 16; i++) {
-            regs->VR_B(v1, i) = population_count8( regs->VR_B(v2, i) );
+            VR_UB(v1, i) = population_count8( VR_UB(v2, i) );
         }
         break;
     case 1:
         for (i=0; i < 8; i++) {
-            regs->VR_H(v1, i) = population_count16( regs->VR_H(v2, i) );
+            VR_UH(v1, i) = population_count16( VR_UH(v2, i) );
         }
         break;
     case 2:
         for (i=0; i < 4; i++) {
-            regs->VR_F(v1, i) = population_count32( regs->VR_F(v2, i) );
+            VR_UF(v1, i) = population_count32( VR_UF(v2, i) );
         }
         break;
     case 3:
         for (i=0; i < 2; i++) {
-            regs->VR_D(v1, i) = population_count64( regs->VR_D(v2, i) );
+            VR_UD(v1, i) = population_count64( VR_UD(v2, i) );
         }
         break;
     default:
@@ -1164,22 +1164,22 @@ DEF_INST( vector_count_trailing_zeros )
     {
     case 0:
         for (i=0; i < 16; i++) {
-            regs->VR_B(v1, i) = trailing_zeros8( regs->VR_B(v2, i) );
+            VR_UB(v1, i) = trailing_zeros8( VR_UB(v2, i) );
         }
         break;
     case 1:
         for (i=0; i < 8; i++) {
-            regs->VR_H(v1, i) = trailing_zeros16( regs->VR_H(v2, i) );
+            VR_UH(v1, i) = trailing_zeros16( VR_UH(v2, i) );
         }
         break;
     case 2:
         for (i=0; i < 4; i++) {
-            regs->VR_F(v1, i) = trailing_zeros32( regs->VR_F(v2, i) );
+            VR_UF(v1, i) = trailing_zeros32( VR_UF(v2, i) );
         }
         break;
     case 3:
         for (i=0; i < 2; i++) {
-            regs->VR_D(v1, i) = trailing_zeros64( regs->VR_D(v2, i) );
+            VR_UD(v1, i) = trailing_zeros64( VR_UD(v2, i) );
         }
         break;
     default:
@@ -1208,22 +1208,22 @@ DEF_INST( vector_count_leading_zeros )
     {
     case 0:
         for (i=0; i < 16; i++) {
-            regs->VR_B(v1, i) = leading_zeros8( regs->VR_B(v2, i) );
+            VR_UB(v1, i) = leading_zeros8( VR_UB(v2, i) );
         }
         break;
     case 1:
         for (i=0; i < 8; i++) {
-            regs->VR_H(v1, i) = leading_zeros16( regs->VR_H(v2, i) );
+            VR_UH(v1, i) = leading_zeros16( VR_UH(v2, i) );
         }
         break;
     case 2:
         for (i=0; i < 4; i++) {
-            regs->VR_F(v1, i) = leading_zeros32( regs->VR_F(v2, i) );
+            VR_UF(v1, i) = leading_zeros32( VR_UF(v2, i) );
         }
         break;
     case 3:
         for (i=0; i < 2; i++) {
-            regs->VR_D(v1, i) = leading_zeros64( regs->VR_D(v2, i) );
+            VR_UD(v1, i) = leading_zeros64( VR_UD(v2, i) );
         }
         break;
     default:
@@ -1249,7 +1249,7 @@ DEF_INST( vector_load_vector )
     
     ZVECTOR_CHECK( regs );
 
-    regs->VR_Q( v1 ) = regs->VR_Q( v2 );
+    VR_Q(v1) = VR_Q(v2);
 
     ZVECTOR_END( regs );
 }
@@ -1278,25 +1278,25 @@ DEF_INST( vector_isolate_string )
     case 0:
         for (i=0; i < 16; i++)
         {
-            if (regs->VR_B(v2, i) == 0)
+            if (VR_UB(v2, i) == 0)
                 zero = 1;
-            regs->VR_B(v1, i) = zero ? 0 : regs->VR_B(v2, i);
+            VR_UB(v1, i) = zero ? 0 : VR_UB(v2, i);
         }
         break;
     case 1:
         for (i=0; i < 8; i++)
         {
-            if (regs->VR_H(v2, i) == 0)
+            if (VR_UH(v2, i) == 0)
                 zero = 1;
-            regs->VR_H(v1, i) = zero ? 0 : regs->VR_H(v2, i);
+            VR_UH(v1, i) = zero ? 0 : VR_UH(v2, i);
         }
         break;
     case 2:
         for (i=0; i < 4; i++)
         {
-            if (regs->VR_F(v2, i) == 0)
+            if (VR_UF(v2, i) == 0)
                 zero = 1;
-            regs->VR_F(v1, i) = zero ? 0 : regs->VR_F(v2, i);
+            VR_UF(v1, i) = zero ? 0 : VR_UF(v2, i);
         }
         break;
     default:
@@ -1330,16 +1330,16 @@ DEF_INST( vector_sign_extend_to_doubleword )
     switch (m3)
     {
     case 0:
-        regs->VR_D(v1, 0) = (S64)(S8) regs->VR_B(v2, 7);
-        regs->VR_D(v1, 1) = (S64)(S8) regs->VR_B(v2, 15);
+        VR_SD(v1, 0) = VR_SB(v2, 7);
+        VR_SD(v1, 1) = VR_SB(v2, 15);
         break;
     case 1:
-        regs->VR_D(v1, 0) = (S64)(S16) regs->VR_H(v2, 3);
-        regs->VR_D(v1, 1) = (S64)(S16) regs->VR_H(v2, 7);
+        VR_SD(v1, 0) = VR_SH(v2, 3);
+        VR_SD(v1, 1) = VR_SH(v2, 7);
         break;
     case 2:
-        regs->VR_D(v1, 0) = (S64)(S32) regs->VR_F(v2, 1);
-        regs->VR_D(v1, 1) = (S64)(S32) regs->VR_F(v2, 3);
+        VR_SD(v1, 0) = VR_SF(v2, 1);
+        VR_SD(v1, 1) = VR_SF(v2, 3);
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -1371,33 +1371,33 @@ DEF_INST( vector_merge_low )
     {
     case 0:
         for (i=0; i < 8; i++) {
-            temp8[i*2  ] = regs->VR_B(v2, i + 8);
-            temp8[i*2+1] = regs->VR_B(v3, i + 8);
+            temp8[i*2  ] = VR_UB(v2, i + 8);
+            temp8[i*2+1] = VR_UB(v3, i + 8);
         }
         for (i=0; i < 16; i++) 
-            regs->VR_B(v1, i) = temp8[i];
+            VR_UB(v1, i) = temp8[i];
         break;
     case 1:
         for (i=0; i < 4; i++) {
-            temp16[i*2  ] = regs->VR_H(v2, i + 4);
-            temp16[i*2+1] = regs->VR_H(v3, i + 4);
+            temp16[i*2  ] = VR_UH(v2, i + 4);
+            temp16[i*2+1] = VR_UH(v3, i + 4);
         }
         for (i=0; i < 8; i++) 
-            regs->VR_H(v1, i) = temp16[i];
+            VR_UH(v1, i) = temp16[i];
         break;
     case 2:
         for (i=0; i < 2; i++) {
-            temp32[i*2  ] = regs->VR_F(v2, i + 2);
-            temp32[i*2+1] = regs->VR_F(v3, i + 2);
+            temp32[i*2  ] = VR_UF(v2, i + 2);
+            temp32[i*2+1] = VR_UF(v3, i + 2);
         }
         for (i=0; i < 4; i++) 
-            regs->VR_F(v1, i) = temp32[i];
+            VR_UF(v1, i) = temp32[i];
         break;
     case 3:
-        temp64[0] = regs->VR_D(v2, 1);
-        temp64[1] = regs->VR_D(v3, 1);
-        regs->VR_D(v1, 0) = temp64[0];
-        regs->VR_D(v1, 1) = temp64[1];
+        temp64[0] = VR_UD(v2, 1);
+        temp64[1] = VR_UD(v3, 1);
+        VR_UD(v1, 0) = temp64[0];
+        VR_UD(v1, 1) = temp64[1];
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -1429,33 +1429,33 @@ DEF_INST( vector_merge_high )
     {
     case 0:
         for (i=0; i < 8; i++) {
-            temp8[i*2  ] = regs->VR_B(v2, i);
-            temp8[i*2+1] = regs->VR_B(v3, i);
+            temp8[i*2  ] = VR_UB(v2, i);
+            temp8[i*2+1] = VR_UB(v3, i);
         }
         for (i=0; i < 16; i++) 
-            regs->VR_B(v1, i) = temp8[i];
+            VR_UB(v1, i) = temp8[i];
         break;
     case 1:
         for (i=0; i < 4; i++) {
-            temp16[i*2  ] = regs->VR_H(v2, i);
-            temp16[i*2+1] = regs->VR_H(v3, i);
+            temp16[i*2  ] = VR_UH(v2, i);
+            temp16[i*2+1] = VR_UH(v3, i);
         }
         for (i=0; i < 8; i++) 
-            regs->VR_H(v1, i) = temp16[i];
+            VR_UH(v1, i) = temp16[i];
         break;
     case 2:
         for (i=0; i < 2; i++) {
-            temp32[i*2  ] = regs->VR_F(v2, i);
-            temp32[i*2+1] = regs->VR_F(v3, i);
+            temp32[i*2  ] = VR_UF(v2, i);
+            temp32[i*2+1] = VR_UF(v3, i);
         }
         for (i=0; i < 4; i++) 
-            regs->VR_F(v1, i) = temp32[i];
+            VR_UF(v1, i) = temp32[i];
         break;
     case 3:
-        temp64[0] = regs->VR_D(v2, 0);
-        temp64[1] = regs->VR_D(v3, 0);
-        regs->VR_D(v1, 0) = temp64[0];
-        regs->VR_D(v1, 1) = temp64[1];
+        temp64[0] = VR_UD(v2, 0);
+        temp64[1] = VR_UD(v3, 0);
+        VR_UD(v1, 0) = temp64[0];
+        VR_UD(v1, 1) = temp64[1];
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -1476,8 +1476,8 @@ DEF_INST( vector_load_vr_from_grs_disjoint )
 
     ZVECTOR_CHECK( regs );
 
-    regs->VR_D(v1, 0) = regs->GR(r2);
-    regs->VR_D(v1, 1) = regs->GR(r3);
+    VR_UD(v1, 0) = regs->GR(r2);
+    VR_UD(v1, 1) = regs->GR(r3);
 
     ZVECTOR_END( regs );
 }
@@ -1500,11 +1500,11 @@ DEF_INST( vector_sum_across_word )
     {
     case 0:
         for (i=0; i < 4; i++)
-            regs->VR_F(v1, i) = (U32) regs->VR_B(v2, i*4) + regs->VR_B(v2, i*4+1) + regs->VR_B(v2, i*4+2) + regs->VR_B(v2, i*4+ 3) + regs->VR_B(v3, i*4+3);
+            VR_UF(v1, i) = VR_UB(v2, i*4) + VR_UB(v2, i*4+1) + VR_UB(v2, i*4+2) + VR_UB(v2, i*4+ 3) + VR_UB(v3, i*4+3);
         break;
     case 1:
         for (i=0; i < 4; i++)
-            regs->VR_F(v1, i) = (U32) regs->VR_H(v2, i*2) + regs->VR_H(v2, i*2+1) + regs->VR_H(v3, i*2+1);
+            VR_UF(v1, i) = VR_UH(v2, i*2) + VR_UH(v2, i*2+1) + VR_UH(v3, i*2+1);
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -1532,19 +1532,19 @@ DEF_INST( vector_sum_across_doubleword )
     switch (m4)
     {
     case 2:
-        regs->VR_D(v1, 0) = 0;
-        regs->VR_D(v1, 1) = regs->VR_F(v2, 0) + regs->VR_F(v2, 1) + regs->VR_F(v2, 2) + regs->VR_F(v2, 3) + regs->VR_F(v3, 3);
+        VR_UD(v1, 0) = 0;
+        VR_UD(v1, 1) = VR_UF(v2, 0) + VR_UF(v2, 1) + VR_UF(v2, 2) + VR_UF(v2, 3) + VR_UF(v3, 3);
         break;
     case 3:
         high = 0;
-        low = regs->VR_D(v2, 0);
-        add = low + regs->VR_D(v2, 1);
+        low = VR_UD(v2, 0);
+        add = low + VR_UD(v2, 1);
         if (add < low) high++;
         low = add;
-        add = low + regs->VR_D(v3, 1);
+        add = low + VR_UD(v3, 1);
         if (add < low) high++;
-        regs->VR_D(v1, 0) = high;
-        regs->VR_D(v1, 1) = add;
+        VR_UD(v1, 0) = high;
+        VR_UD(v1, 1) = add;
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -1570,15 +1570,15 @@ DEF_INST( vector_checksum )
 
     ZVECTOR_CHECK( regs );
     
-    sum = regs->VR_F(v3, 1);
+    sum = VR_UF(v3, 1);
     for (i=0; i < 4; i++) {
-        sum += regs->VR_F(v2, i);
-        if (sum < regs->VR_F(v2, i)) sum++;
+        sum += VR_UF(v2, i);
+        if (sum < VR_UF(v2, i)) sum++;
     }
-    regs->VR_F(v1, 0) = 0;
-    regs->VR_F(v1, 1) = sum;
-    regs->VR_F(v1, 2) = 0;
-    regs->VR_F(v1, 3) = 0;
+    VR_UF(v1, 0) = 0;
+    VR_UF(v1, 1) = sum;
+    VR_UF(v1, 2) = 0;
+    VR_UF(v1, 3) = 0;
         
     ZVECTOR_END( regs );
 }
@@ -1601,20 +1601,20 @@ DEF_INST( vector_sum_across_quadword )
     switch (m4)
     {
     case 2:
-        regs->VR_D(v1, 0) = 0;
-        regs->VR_D(v1, 1) = regs->VR_F(v2, 0) + regs->VR_F(v2, 1) + regs->VR_F(v2, 2) + regs->VR_F(v2, 3)
-            + regs->VR_F(v3, 3);
+        VR_UD(v1, 0) = 0;
+        VR_UD(v1, 1) = VR_UF(v2, 0) + VR_UF(v2, 1) + VR_UF(v2, 2) + VR_UF(v2, 3)
+            + VR_UF(v3, 3);
         break;
     case 3:
         high = 0;
-        low = regs->VR_D(v2, 0);
-        add = low + regs->VR_D(v2, 1);
+        low = VR_UD(v2, 0);
+        add = low + VR_UD(v2, 1);
         if (add < low) high++;
         low = add;
-        add = low + regs->VR_D(v3, 1);
+        add = low + VR_UD(v3, 1);
         if (add < low) high++;
-        regs->VR_D(v1, 0) = high;
-        regs->VR_D(v1, 1) = add;
+        VR_UD(v1, 0) = high;
+        VR_UD(v1, 1) = add;
         break;
     default:
         ARCH_DEP(program_interrupt) (regs, PGM_SPECIFICATION_EXCEPTION);
@@ -1639,8 +1639,8 @@ DEF_INST( vector_and )
 
     ZVECTOR_CHECK( regs );
 
-    regs->VR_D(v1, 0) = regs->VR_D(v2, 0) & regs->VR_D(v3, 0);
-    regs->VR_D(v1, 1) = regs->VR_D(v2, 1) & regs->VR_D(v3, 1);
+    VR_UD(v1, 0) = VR_UD(v2, 0) & VR_UD(v3, 0);
+    VR_UD(v1, 1) = VR_UD(v2, 1) & VR_UD(v3, 1);
     
     ZVECTOR_END( regs );
 }
@@ -1660,8 +1660,8 @@ DEF_INST( vector_and_with_complement )
 
     ZVECTOR_CHECK( regs );
 
-    regs->VR_D(v1, 0) = regs->VR_D(v2, 0) & ~regs->VR_D(v3, 0);
-    regs->VR_D(v1, 1) = regs->VR_D(v2, 1) & ~regs->VR_D(v3, 1);
+    VR_UD(v1, 0) = VR_UD(v2, 0) & ~VR_UD(v3, 0);
+    VR_UD(v1, 1) = VR_UD(v2, 1) & ~VR_UD(v3, 1);
 
     ZVECTOR_END( regs );
 }
@@ -1681,8 +1681,8 @@ DEF_INST( vector_or )
 
     ZVECTOR_CHECK( regs );
 
-    regs->VR_D(v1, 0) = regs->VR_D(v2, 0) | regs->VR_D(v3, 0);
-    regs->VR_D(v1, 1) = regs->VR_D(v2, 1) | regs->VR_D(v3, 1);
+    VR_UD(v1, 0) = VR_UD(v2, 0) | VR_UD(v3, 0);
+    VR_UD(v1, 1) = VR_UD(v2, 1) | VR_UD(v3, 1);
 
     ZVECTOR_END( regs );
 }
@@ -1702,8 +1702,8 @@ DEF_INST( vector_nor )
 
     ZVECTOR_CHECK( regs );
 
-    regs->VR_D(v1, 0) = (regs->VR_D(v2, 0) ^ ULLONG_MAX) & (regs->VR_D(v3, 0) ^ ULLONG_MAX);
-    regs->VR_D(v1, 1) = (regs->VR_D(v2, 1) ^ ULLONG_MAX) & (regs->VR_D(v3, 1) ^ ULLONG_MAX);
+    VR_UD(v1, 0) = (VR_UD(v2, 0) ^ ULLONG_MAX) & (VR_UD(v3, 0) ^ ULLONG_MAX);
+    VR_UD(v1, 1) = (VR_UD(v2, 1) ^ ULLONG_MAX) & (VR_UD(v3, 1) ^ ULLONG_MAX);
 
     ZVECTOR_END( regs );
 }
@@ -1723,8 +1723,8 @@ DEF_INST( vector_exclusive_or )
 
     ZVECTOR_CHECK( regs );
 
-    regs->VR_D(v1, 0) = regs->VR_D(v2, 0) ^ regs->VR_D(v3, 0);
-    regs->VR_D(v1, 1) = regs->VR_D(v2, 1) ^ regs->VR_D(v3, 1);
+    VR_UD(v1, 0) = VR_UD(v2, 0) ^ VR_UD(v3, 0);
+    VR_UD(v1, 1) = VR_UD(v2, 1) ^ VR_UD(v3, 1);
 
     ZVECTOR_END( regs );
 }
@@ -1747,19 +1747,19 @@ DEF_INST( vector_element_shift_left_vector )
     {
     case 0:
         for (i=0; i < 16; i++)
-            regs->VR_B(v1, i) = regs->VR_B(v2, i) << (regs->VR_B(v3, i) % 8);
+            VR_UB(v1, i) = VR_UB(v2, i) << (VR_UB(v3, i) % 8);
         break;
     case 1:
         for (i=0; i < 8; i++)
-            regs->VR_H(v1, i) = regs->VR_H(v2, i) << (regs->VR_H(v3, i) % 16);
+            VR_UH(v1, i) = VR_UH(v2, i) << (VR_UH(v3, i) % 16);
         break;
     case 2:
         for (i=0; i < 4; i++)
-            regs->VR_F(v1, i) = regs->VR_F(v2, i) << (regs->VR_F(v3, i) % 32);
+            VR_UF(v1, i) = VR_UF(v2, i) << (VR_UF(v3, i) % 32);
         break;
     case 3:
         for (i=0; i < 2; i++)
-            regs->VR_D(v1, i) = regs->VR_D(v2, i) << (regs->VR_D(v3, i) % 64);
+            VR_UD(v1, i) = VR_UD(v2, i) << (VR_UD(v3, i) % 64);
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -1787,40 +1787,40 @@ DEF_INST( vector_element_rotate_and_insert_under_mask )
         rotl = i4 % 8;
         rotr = -rotl & 7;
         for (i=0; i < 16; i++) {
-            a = regs->VR_B(v1, i);
-            b = regs->VR_B(v2, i) << rotl | regs->VR_B(v2, i) >> rotr;
-            c = regs->VR_B(v3, i);
-            regs->VR_B(v1, i) = (a & ~c) | (b & c);
+            a = VR_UB(v1, i);
+            b = VR_UB(v2, i) << rotl | VR_UB(v2, i) >> rotr;
+            c = VR_UB(v3, i);
+            VR_UB(v1, i) = (a & ~c) | (b & c);
         }
         break;
     case 1:
         rotl = i4 % 16;
         rotr = -rotl & 15;
         for (i=0; i < 8; i++) {
-            a = regs->VR_H(v1, i);
-            b = regs->VR_H(v2, i) << rotl | regs->VR_H(v2, i) >> rotr;
-            c = regs->VR_H(v3, i);
-            regs->VR_H(v1, i) = (a & ~c) | (b & c);
+            a = VR_UH(v1, i);
+            b = VR_UH(v2, i) << rotl | VR_UH(v2, i) >> rotr;
+            c = VR_UH(v3, i);
+            VR_UH(v1, i) = (a & ~c) | (b & c);
         }
         break;
     case 2:
         rotl = i4 % 32;
         rotr = -rotl & 31;
         for (i=0; i < 4; i++) {
-            a = regs->VR_F(v1, i);
-            b = regs->VR_F(v2, i) << rotl | regs->VR_F(v2, i) >> rotr;
-            c = regs->VR_F(v3, i);
-            regs->VR_F(v1, i) = (a & ~c) | (b & c);
+            a = VR_UF(v1, i);
+            b = VR_UF(v2, i) << rotl | VR_UF(v2, i) >> rotr;
+            c = VR_UF(v3, i);
+            VR_UF(v1, i) = (a & ~c) | (b & c);
         }
         break;
     case 3:
         rotl = i4 % 64;
         rotr = -rotl & 63;
         for (i=0; i < 2; i++) {
-            a = regs->VR_D(v1, i);
-            b = regs->VR_D(v2, i) << rotl | regs->VR_D(v2, i) >> rotr;
-            c = regs->VR_D(v3, i);
-            regs->VR_D(v1, i) = (a & ~c) | (b & c);
+            a = VR_UD(v1, i);
+            b = VR_UD(v2, i) << rotl | VR_UD(v2, i) >> rotr;
+            c = VR_UD(v3, i);
+            VR_UD(v1, i) = (a & ~c) | (b & c);
         }
         break;
     default:
@@ -1849,30 +1849,30 @@ DEF_INST( vector_element_rotate_left_logical_vector )
     {
     case 0:
         for (i=0; i < 16; i++) {
-            rotl = regs->VR_B(v3, i) % 8;
+            rotl = VR_UB(v3, i) % 8;
             rotr = -rotl & 7;
-            regs->VR_B(v1, i) = (regs->VR_B(v2, i) << rotl) | (regs->VR_B(v2, i) >> rotr);
+            VR_UB(v1, i) = (VR_UB(v2, i) << rotl) | (VR_UB(v2, i) >> rotr);
         }
         break;
     case 1:
         for (i=0; i < 8; i++) {
-            rotl = regs->VR_H(v3, i) % 16;
+            rotl = VR_UH(v3, i) % 16;
             rotr = -rotl & 15;
-            regs->VR_H(v1, i) = (regs->VR_H(v2, i) << rotl) | (regs->VR_H(v2, i) >> rotr);
+            VR_UH(v1, i) = (VR_UH(v2, i) << rotl) | (VR_UH(v2, i) >> rotr);
         }
         break;
     case 2:
         for (i=0; i < 4; i++) {
-            rotl = regs->VR_F(v3, i) % 32;
+            rotl = VR_UF(v3, i) % 32;
             rotr = -rotl & 31;
-            regs->VR_F(v1, i) = (regs->VR_F(v2, i) << rotl) | (regs->VR_F(v2, i) >> rotr);
+            VR_UF(v1, i) = (VR_UF(v2, i) << rotl) | (VR_UF(v2, i) >> rotr);
         }
         break;
     case 3:
         for (i=0; i < 2; i++) {
-            rotl = regs->VR_D(v3, i) % 64;
+            rotl = VR_UD(v3, i) % 64;
             rotr = -rotl & 63;
-            regs->VR_D(v1, i) = (regs->VR_D(v2, i) << rotl) | (regs->VR_D(v2, i) >> rotr);
+            VR_UD(v1, i) = (VR_UD(v2, i) << rotl) | (VR_UD(v2, i) >> rotr);
         }
         break;
     default:
@@ -1899,8 +1899,8 @@ DEF_INST( vector_shift_left )
     ZVECTOR_CHECK( regs );
 
     for (i=0; i < 16; i++) {
-        shift = regs->VR_B(v3, i) & 0x7;
-        regs->VR_B(v1, i) = regs->VR_B(v2, i) << shift | (i == 15 ? 0x00 : regs->VR_B(v2, i + 1)) >> (8 - shift);
+        shift = VR_UB(v3, i) & 0x7;
+        VR_UB(v1, i) = VR_UB(v2, i) << shift | (i == 15 ? 0x00 : VR_UB(v2, i + 1)) >> (8 - shift);
     }
 
     ZVECTOR_END( regs );
@@ -1921,9 +1921,9 @@ DEF_INST( vector_shift_left_by_byte )
 
     ZVECTOR_CHECK( regs );
 
-    shift = (regs->VR_B(v3, 7) & 0x78) >> 3;
+    shift = (VR_UB(v3, 7) & 0x78) >> 3;
     for (i=0; i < 16; i++) {
-        regs->VR_B(v1, i) = (i+shift) < 16 ? regs->VR_B(v2, i + shift) : 0x00;
+        VR_UB(v1, i) = (i+shift) < 16 ? VR_UB(v2, i + shift) : 0x00;
     }
 
     ZVECTOR_END( regs );
@@ -1944,7 +1944,7 @@ DEF_INST( vector_shift_left_double_by_byte )
 
     shift = i4 & 0xf;
     for (i=0; i < 16; i++) {
-        regs->VR_B(v1, i) = (i+shift) < 16 ? regs->VR_B(v2, i + shift) : regs->VR_B(v3, i+shift-16);
+        VR_UB(v1, i) = (i+shift) < 16 ? VR_UB(v2, i + shift) : VR_UB(v3, i+shift-16);
     }
 
     ZVECTOR_END( regs );
@@ -1968,26 +1968,26 @@ DEF_INST( vector_element_shift_right_logical_vector )
     {
     case 0:
         for (i=0; i < 16; i++) {
-            shift = regs->VR_B(v3, i) % 8;
-            regs->VR_B(v1, i) = regs->VR_B(v2, i) >> shift;
+            shift = VR_UB(v3, i) % 8;
+            VR_UB(v1, i) = VR_UB(v2, i) >> shift;
         }
         break;
     case 1:
         for (i=0; i < 8; i++) {
-            shift = regs->VR_H(v3, i) % 16;
-            regs->VR_H(v1, i) = regs->VR_H(v2, i) >> shift;
+            shift = VR_UH(v3, i) % 16;
+            VR_UH(v1, i) = VR_UH(v2, i) >> shift;
         }
         break;
     case 2:
         for (i=0; i < 4; i++) {
-            shift = regs->VR_F(v3, i) % 32;
-            regs->VR_F(v1, i) = regs->VR_F(v2, i) >> shift;
+            shift = VR_UF(v3, i) % 32;
+            VR_UF(v1, i) = VR_UF(v2, i) >> shift;
         }
         break;
     case 3:
         for (i=0; i < 2; i++) {
-            shift = regs->VR_D(v3, i) % 64;
-            regs->VR_D(v1, i) = regs->VR_D(v2, i) >> shift;
+            shift = VR_UD(v3, i) % 64;
+            VR_UD(v1, i) = VR_UD(v2, i) >> shift;
         }
         break;
     default:
@@ -2016,26 +2016,26 @@ DEF_INST( vector_element_shift_right_arithmetic_vector )
     {
     case 0:
         for (i=0; i < 16; i++) {
-            shift = regs->VR_B(v3, i) % 8;
-            regs->VR_B(v1, i) = (S8)regs->VR_B(v2, i) >> shift;
+            shift = VR_SB(v3, i) % 8;
+            VR_SB(v1, i) = VR_SB(v2, i) >> shift;
         }
         break;
     case 1:
         for (i=0; i < 8; i++) {
-            shift = regs->VR_H(v3, i) % 16;
-            regs->VR_H(v1, i) = (S16)regs->VR_H(v2, i) >> shift;
+            shift = VR_SH(v3, i) % 16;
+            VR_SH(v1, i) = VR_SH(v2, i) >> shift;
         }
         break;
     case 2:
         for (i=0; i < 4; i++) {
-            shift = regs->VR_F(v3, i) % 32;
-            regs->VR_F(v1, i) = (S32)regs->VR_F(v2, i) >> shift;
+            shift = VR_SF(v3, i) % 32;
+            VR_SF(v1, i) = VR_SF(v2, i) >> shift;
         }
         break;
     case 3:
         for (i=0; i < 2; i++) {
-            shift = regs->VR_D(v3, i) % 64;
-            regs->VR_D(v1, i) = (S64)regs->VR_D(v2, i) >> shift;
+            shift = VR_SD(v3, i) % 64;
+            VR_SD(v1, i) = VR_SD(v2, i) >> shift;
         }
         break;
     default:
@@ -2062,8 +2062,8 @@ DEF_INST( vector_shift_right_logical )
     ZVECTOR_CHECK( regs );
 
     for (i=0; i < 16; i++) {
-        shift = regs->VR_B(v3, i) & 0x7;
-        regs->VR_B(v1, i) = regs->VR_B(v2, i) >> shift | (i == 0 ? 0x00 : regs->VR_B(v2, i - 1)) << (8 - shift);
+        shift = VR_UB(v3, i) & 0x7;
+        VR_UB(v1, i) = VR_UB(v2, i) >> shift | (i == 0 ? 0x00 : VR_UB(v2, i - 1)) << (8 - shift);
     }
 
     ZVECTOR_END( regs );
@@ -2084,13 +2084,13 @@ DEF_INST( vector_shift_right_logical_by_byte )
 
     ZVECTOR_CHECK( regs );
 
-    shift = (regs->VR_B(v3, 7) >> 3) & 0x0f;
+    shift = (VR_UB(v3, 7) >> 3) & 0x0f;
     
-    regs->VR_D(v1, 0) = 0;
-    regs->VR_D(v1, 1) = 0;
+    VR_UD(v1, 0) = 0;
+    VR_UD(v1, 1) = 0;
     
     for (i=shift; i < 16; i++)
-        regs->VR_B(v1, i) = regs->VR_B(v2, i - shift);
+        VR_UB(v1, i) = VR_UB(v2, i - shift);
 
     ZVECTOR_END( regs );
 }
@@ -2111,8 +2111,8 @@ DEF_INST( vector_shift_right_arithmetic )
     ZVECTOR_CHECK( regs );
 
     for (i=0; i < 16; i++) {
-        shift = regs->VR_B(v3, i) & 0x7;
-        regs->VR_B(v1, i) = (S8) regs->VR_B(v2, i) >> shift | (i == 0 ? 0x00 : (S8) regs->VR_B(v2, i - 1)) << (8 - shift);
+        shift = VR_SB(v3, i) & 0x7;
+        VR_SB(v1, i) = VR_SB(v2, i) >> shift | (i == 0 ? 0x00 : VR_SB(v2, i - 1)) << (8 - shift);
     }
 
     ZVECTOR_END( regs );
@@ -2134,12 +2134,12 @@ DEF_INST( vector_shift_right_arithmetic_by_byte )
 
     ZVECTOR_CHECK( regs );
 
-    shift = (regs->VR_B(v3, 7) >> 3) & 0x0f;
+    shift = (VR_UB(v3, 7) >> 3) & 0x0f;
     
-    pad = (regs->VR_B(v2, 0) & 0x80) ? 0xff : 0x00;
+    pad = (VR_UB(v2, 0) & 0x80) ? 0xff : 0x00;
     
     for (i=0; i < 16; i++)
-        regs->VR_B(v1, i) = (i-shift) >= 0 ? regs->VR_B(v2, i-shift) : pad;
+        VR_UB(v1, i) = (i-shift) >= 0 ? VR_UB(v2, i-shift) : pad;
 
     ZVECTOR_END( regs );
 }
@@ -2169,9 +2169,9 @@ DEF_INST( vector_find_element_equal )
         ind1 = 16, ind2 = ind1, max = ind1;
         for (i=0; i < max && (ind1 == max || ind2 == max); i++)
         {
-            if ((ind1 == max) && regs->VR_B(v2,i) == regs->VR_B(v3,i))
+            if ((ind1 == max) && VR_UB(v2,i) == VR_UB(v3,i))
                 ind1 = i;
-            if ((ind2 == max) && M5_ZS && regs->VR_B(v2,i) == 0) // if M5-ZS (Zero Search)
+            if ((ind2 == max) && M5_ZS && VR_UB(v2,i) == 0) // if M5-ZS (Zero Search)
                 ind2 = i;
         }
         break;
@@ -2179,9 +2179,9 @@ DEF_INST( vector_find_element_equal )
         ind1 = 8, ind2 = ind1, max = ind1;
         for (i=0; i < max && (ind1 == max || ind2 == max); i++)
         {
-            if ((ind1 == max) && regs->VR_H(v2,i) == regs->VR_H(v3,i))
+            if ((ind1 == max) && VR_UH(v2,i) == VR_UH(v3,i))
                 ind1 = i;
-            if ((ind2 == max) && M5_ZS && regs->VR_H(v2, i) == 0) // if M5-ZS (Zero Search)
+            if ((ind2 == max) && M5_ZS && VR_UH(v2, i) == 0) // if M5-ZS (Zero Search)
                 ind2 = i;
         }
         break;
@@ -2189,18 +2189,18 @@ DEF_INST( vector_find_element_equal )
         ind1 = 4, ind2 = ind1, max = ind1;
         for (i=0; i < max && (ind1 == max || ind2 == max); i++)
         {
-            if ((ind1 == max) && regs->VR_F(v2,i) == regs->VR_F(v3,i))
+            if ((ind1 == max) && VR_UF(v2,i) == VR_UF(v3,i))
                 ind1 = i;
-            if ((ind2 == max) && M5_ZS && regs->VR_F(v2,i) == 0) // if M5-ZS (Zero Search)
+            if ((ind2 == max) && M5_ZS && VR_UF(v2,i) == 0) // if M5-ZS (Zero Search)
                 ind2 = i;
         }
         break;
     default:
         break;
     }
-    regs->VR_D(v1, 0) = 0;
-    regs->VR_B(v1, 7) = min(ind1, ind2) * (1 << m4); 
-    regs->VR_D(v1, 1) = 0;
+    VR_UD(v1, 0) = 0;
+    VR_UB(v1, 7) = min(ind1, ind2) * (1 << m4); 
+    VR_UD(v1, 1) = 0;
 
     if (M5_CS)               // if M5_CS (Condition Code Set)
     {
@@ -2245,12 +2245,12 @@ DEF_INST( vector_find_element_not_equal )
         ind1 = 16, ind2 = ind1, max = ind1;
         for (i=0; i < max && (ind1 == max || ind2 == max); i++)
         {
-            if ((ind1 == max) && regs->VR_B(v2,i) != regs->VR_B(v3,i))
+            if ((ind1 == max) && VR_UB(v2,i) != VR_UB(v3,i))
             {
-                match = (regs->VR_B(v2,i) < regs->VR_B(v3,i)) ? 1:2;
+                match = (VR_UB(v2,i) < VR_UB(v3,i)) ? 1:2;
                 ind1 = i;
             }
-            if ((ind2 == max) && M5_ZS && regs->VR_B(v2, i) == 0) // if M5-ZS (Zero Search)
+            if ((ind2 == max) && M5_ZS && VR_UB(v2, i) == 0) // if M5-ZS (Zero Search)
                 ind2 = i;
         }
         break;
@@ -2258,12 +2258,12 @@ DEF_INST( vector_find_element_not_equal )
         ind1 = 8, ind2 = ind1, max = ind1;
         for (i=0; i < max && (ind1 == max || ind2 == max); i++)
         {
-            if ((ind1 == max) && regs->VR_H(v2, i) != regs->VR_H(v3, i))
+            if ((ind1 == max) && VR_UH(v2, i) != VR_UH(v3, i))
             {
-                match = (regs->VR_H(v2, i) < regs->VR_H(v3, i)) ? 1 : 2;
+                match = (VR_UH(v2, i) < VR_UH(v3, i)) ? 1 : 2;
                 ind1 = i;
             }
-            if ((ind2 == max) && M5_ZS && regs->VR_H(v2, i) == 0) // if M5-ZS (Zero Search)
+            if ((ind2 == max) && M5_ZS && VR_UH(v2, i) == 0) // if M5-ZS (Zero Search)
                 ind2 = i;
         }
         break;
@@ -2271,21 +2271,21 @@ DEF_INST( vector_find_element_not_equal )
         ind1 = 4, ind2 = ind1, max = ind1;
         for (i=0; i < max && (ind1 == max || ind2 == max); i++)
         {
-            if ((ind1 == max) && regs->VR_F(v2, i) != regs->VR_F(v3, i))
+            if ((ind1 == max) && VR_UF(v2, i) != VR_UF(v3, i))
             {
-                match = (regs->VR_F(v2, i) < regs->VR_F(v3, i)) ? 1 : 2;
+                match = (VR_UF(v2, i) < VR_UF(v3, i)) ? 1 : 2;
                 ind1 = i;
             }
-            if ((ind2 == max) && M5_ZS && regs->VR_F(v2, i) == 0) // if M5-ZS (Zero Search)
+            if ((ind2 == max) && M5_ZS && VR_UF(v2, i) == 0) // if M5-ZS (Zero Search)
                 ind2 = i;
         }
         break;
     default:
         break;
     }
-    regs->VR_D(v1, 0) = 0;
-    regs->VR_B(v1, 7) = min(ind1, ind2) * (1 << m4);
-    regs->VR_D(v1, 1) = 0;
+    VR_UD(v1, 0) = 0;
+    VR_UB(v1, 7) = min(ind1, ind2) * (1 << m4);
+    VR_UD(v1, 1) = 0;
 
     if (M5_CS)               // if M5_CS (Condition Code Set)
     {
@@ -2344,9 +2344,9 @@ DEF_INST( vector_find_any_element_equal )
         for (i=0; i < max; i++)
         {
             for (j=0; j < max; j++)
-                if (regs->VR_B(v2, i) == regs->VR_B(v3, j))
+                if (VR_UB(v2, i) == VR_UB(v3, j))
                     int1 |= (1 << i);
-            if (M5_ZS && (regs->VR_B(v2, i) == 0)) // if M5-ZS (Zero Search)
+            if (M5_ZS && (VR_UB(v2, i) == 0)) // if M5-ZS (Zero Search)
                 ind2 = min(ind2, i);
         }
         if (M5_IN)
@@ -2357,7 +2357,7 @@ DEF_INST( vector_find_any_element_equal )
             if (s)
                 ind1 = min(ind1, i);
             if (M5_RT)
-                regs->VR_B(v1, i) = s ? UCHAR_MAX : 0;
+                VR_UB(v1, i) = s ? UCHAR_MAX : 0;
         }
         break;
     case 1:
@@ -2365,9 +2365,9 @@ DEF_INST( vector_find_any_element_equal )
         for (i=0; i < max; i++)
         {
             for (j=0; j < max; j++)
-                if (regs->VR_H(v2, i) == regs->VR_H(v3, j))
+                if (VR_UH(v2, i) == VR_UH(v3, j))
                     int1 |= (1 << i);
-            if (M5_ZS && (regs->VR_H(v2, i) == 0)) // if M5-ZS (Zero Search)
+            if (M5_ZS && (VR_UH(v2, i) == 0)) // if M5-ZS (Zero Search)
                 ind2 = min(ind2, i);
         }
         if (M5_IN)
@@ -2378,7 +2378,7 @@ DEF_INST( vector_find_any_element_equal )
             if (s)
                 ind1 = min(ind1, i);
             if (M5_RT)
-                regs->VR_H(v1, i) = s ? USHRT_MAX : 0;
+                VR_UH(v1, i) = s ? USHRT_MAX : 0;
         }
         break;
     case 2:
@@ -2386,9 +2386,9 @@ DEF_INST( vector_find_any_element_equal )
         for (i=0; i < max; i++)
         {
             for (j=0; j < max; j++)
-                if (regs->VR_F(v2, i) == regs->VR_F(v3, j))
+                if (VR_UF(v2, i) == VR_UF(v3, j))
                     int1 |= (1 << i);
-            if (M5_ZS && (regs->VR_F(v2, i) == 0)) // if M5-ZS (Zero Search)
+            if (M5_ZS && (VR_UF(v2, i) == 0)) // if M5-ZS (Zero Search)
                 ind2 = min(ind2, i);
         }
         if (M5_IN)
@@ -2399,7 +2399,7 @@ DEF_INST( vector_find_any_element_equal )
             if (s)
                 ind1 = min(ind1, i);
             if (M5_RT)
-                regs->VR_F(v1, i) = s ? UINT_MAX : 0;
+                VR_UF(v1, i) = s ? UINT_MAX : 0;
         }
         break;
     default:
@@ -2408,9 +2408,9 @@ DEF_INST( vector_find_any_element_equal )
     }
     if (!M5_RT)               // if !M5_RT (No result Type)
     {
-        regs->VR_D(v1, 0) = 0;
-        regs->VR_B(v1, 7) = min(ind1, ind2) * (1 << m4);
-        regs->VR_D(v1, 1) = 0;
+        VR_UD(v1, 0) = 0;
+        VR_UB(v1, 7) = min(ind1, ind2) * (1 << m4);
+        VR_UD(v1, 1) = 0;
     }
 
     if (M5_CS)               // if M5_CS (Condition Code Set)
@@ -2448,11 +2448,11 @@ DEF_INST( vector_permute_doubleword_immediate )
     
     ZVECTOR_CHECK( regs );
     
-    d1 = regs->VR_D(v2, (m4 >> 2 & 0x01));
-    d2 = regs->VR_D(v3, (m4 & 0x01));
+    d1 = VR_UD(v2, (m4 >> 2 & 0x01));
+    d2 = VR_UD(v3, (m4 & 0x01));
 
-    regs->VR_D(v1, 0) = d1;
-    regs->VR_D(v1, 1) = d2;
+    VR_UD(v1, 0) = d1;
+    VR_UD(v1, 1) = d2;
 
 
     ZVECTOR_END( regs );
@@ -2474,8 +2474,8 @@ DEF_INST( vector_string_range_compare )
 #define M6_ZS ((m6 & 0x2) != 0) // Zero Search
 #define M6_CS ((m6 & 0x1) != 0) // Condition Code Set
 
-    regs->VR_D(v1, 0) = 0;
-    regs->VR_D(v1, 1) = 0;
+    VR_UD(v1, 0) = 0;
+    VR_UD(v1, 1) = 0;
     
     switch (m5)
     {
@@ -2483,19 +2483,19 @@ DEF_INST( vector_string_range_compare )
         max = 16, low1 = max, low2 = max;
         for (i=0; i < max; i++) {
             result1[i] = 0;
-            result2[i] = M6_ZS & (regs->VR_B(v2, i) == 0);
+            result2[i] = M6_ZS & (VR_UB(v2, i) == 0);
             for (j=0; j < max; j+=2) {
                 lr = 0, rr = 0;
-                if ((regs->VR_B(v4, j)   & 0x80) && regs->VR_B(v2, i) == regs->VR_B(v3, j))   lr = 1;
-                if ((regs->VR_B(v4, j)   & 0x40) && regs->VR_B(v2, i) <  regs->VR_B(v3, j))   lr = 1;
-                if ((regs->VR_B(v4, j)   & 0x20) && regs->VR_B(v2, i) >  regs->VR_B(v3, j))   lr = 1;
-                if ((regs->VR_B(v4, j+1) & 0x80) && regs->VR_B(v2, i) == regs->VR_B(v3, j+1)) rr = 1;
-                if ((regs->VR_B(v4, j+1) & 0x40) && regs->VR_B(v2, i) <  regs->VR_B(v3, j+1)) rr = 1;
-                if ((regs->VR_B(v4, j+1) & 0x20) && regs->VR_B(v2, i) >  regs->VR_B(v3, j+1)) rr = 1;
+                if ((VR_UB(v4, j)   & 0x80) && VR_UB(v2, i) == VR_UB(v3, j))   lr = 1;
+                if ((VR_UB(v4, j)   & 0x40) && VR_UB(v2, i) <  VR_UB(v3, j))   lr = 1;
+                if ((VR_UB(v4, j)   & 0x20) && VR_UB(v2, i) >  VR_UB(v3, j))   lr = 1;
+                if ((VR_UB(v4, j+1) & 0x80) && VR_UB(v2, i) == VR_UB(v3, j+1)) rr = 1;
+                if ((VR_UB(v4, j+1) & 0x40) && VR_UB(v2, i) <  VR_UB(v3, j+1)) rr = 1;
+                if ((VR_UB(v4, j+1) & 0x20) && VR_UB(v2, i) >  VR_UB(v3, j+1)) rr = 1;
                 result1[i] = (lr & rr) ^ M6_IN;
             }
             if (M6_RT) {
-                regs->VR_B(v1, i) = result1[i] ? UCHAR_MAX : 0;
+                VR_UB(v1, i) = result1[i] ? UCHAR_MAX : 0;
             }
             if (result1[i]) low1 = min(low1, i);
             if (result2[i]) low2 = min(low2, i);
@@ -2505,19 +2505,19 @@ DEF_INST( vector_string_range_compare )
         max = 8, low1 = max, low2 = max;
         for (i=0; i < max; i++) {
             result1[i] = 0;
-            result2[i] = M6_ZS & (regs->VR_H(v2, i) == 0);
+            result2[i] = M6_ZS & (VR_UH(v2, i) == 0);
             for (j=0; j < max; j+=2) {
                 lr = 0, rr = 0;
-                if ((regs->VR_H(v4, j)   & 0x8000) && regs->VR_H(v2, i) == regs->VR_H(v3, j))   lr = 1;
-                if ((regs->VR_H(v4, j)   & 0x4000) && regs->VR_H(v2, i) <  regs->VR_H(v3, j))   lr = 1;
-                if ((regs->VR_H(v4, j)   & 0x2000) && regs->VR_H(v2, i) >  regs->VR_H(v3, j))   lr = 1;
-                if ((regs->VR_H(v4, j+1) & 0x8000) && regs->VR_H(v2, i) == regs->VR_H(v3, j+1)) rr = 1;
-                if ((regs->VR_H(v4, j+1) & 0x4000) && regs->VR_H(v2, i) <  regs->VR_H(v3, j+1)) rr = 1;
-                if ((regs->VR_H(v4, j+1) & 0x2000) && regs->VR_H(v2, i) >  regs->VR_H(v3, j+1)) rr = 1;
+                if ((VR_UH(v4, j)   & 0x8000) && VR_UH(v2, i) == VR_UH(v3, j))   lr = 1;
+                if ((VR_UH(v4, j)   & 0x4000) && VR_UH(v2, i) <  VR_UH(v3, j))   lr = 1;
+                if ((VR_UH(v4, j)   & 0x2000) && VR_UH(v2, i) >  VR_UH(v3, j))   lr = 1;
+                if ((VR_UH(v4, j+1) & 0x8000) && VR_UH(v2, i) == VR_UH(v3, j+1)) rr = 1;
+                if ((VR_UH(v4, j+1) & 0x4000) && VR_UH(v2, i) <  VR_UH(v3, j+1)) rr = 1;
+                if ((VR_UH(v4, j+1) & 0x2000) && VR_UH(v2, i) >  VR_UH(v3, j+1)) rr = 1;
                 result1[i] = (lr & rr) ^ M6_IN;
             }
             if (M6_RT) {
-                regs->VR_H(v1, i) = result1[i] ? USHRT_MAX : 0;
+                VR_UH(v1, i) = result1[i] ? USHRT_MAX : 0;
             }
             if (result1[i]) low1 = min(low1, i);
             if (result2[i]) low2 = min(low2, i);
@@ -2527,19 +2527,19 @@ DEF_INST( vector_string_range_compare )
         max = 4, low1 = max, low2 = max;
         for (i=0; i < max; i++) {
             result1[i] = 0;
-            result2[i] = M6_ZS & (regs->VR_F(v2, i) == 0);
+            result2[i] = M6_ZS & (VR_UF(v2, i) == 0);
             for (j=0; j < max; j+=2) {
                 lr = 0, rr = 0;
-                if ((regs->VR_F(v4, j)   & 0x8000) && regs->VR_F(v2, i) == regs->VR_F(v3, j))   lr = 1;
-                if ((regs->VR_F(v4, j)   & 0x4000) && regs->VR_F(v2, i) <  regs->VR_F(v3, j))   lr = 1;
-                if ((regs->VR_F(v4, j)   & 0x2000) && regs->VR_F(v2, i) >  regs->VR_F(v3, j))   lr = 1;
-                if ((regs->VR_F(v4, j+1) & 0x8000) && regs->VR_F(v2, i) == regs->VR_F(v3, j+1)) rr = 1;
-                if ((regs->VR_F(v4, j+1) & 0x4000) && regs->VR_F(v2, i) <  regs->VR_F(v3, j+1)) rr = 1;
-                if ((regs->VR_F(v4, j+1) & 0x2000) && regs->VR_F(v2, i) >  regs->VR_F(v3, j+1)) rr = 1;
+                if ((VR_UF(v4, j)   & 0x8000) && VR_UF(v2, i) == VR_UF(v3, j))   lr = 1;
+                if ((VR_UF(v4, j)   & 0x4000) && VR_UF(v2, i) <  VR_UF(v3, j))   lr = 1;
+                if ((VR_UF(v4, j)   & 0x2000) && VR_UF(v2, i) >  VR_UF(v3, j))   lr = 1;
+                if ((VR_UF(v4, j+1) & 0x8000) && VR_UF(v2, i) == VR_UF(v3, j+1)) rr = 1;
+                if ((VR_UF(v4, j+1) & 0x4000) && VR_UF(v2, i) <  VR_UF(v3, j+1)) rr = 1;
+                if ((VR_UF(v4, j+1) & 0x2000) && VR_UF(v2, i) >  VR_UF(v3, j+1)) rr = 1;
                 result1[i] = (lr & rr) ^ M6_IN;
             }
             if (M6_RT) {
-                regs->VR_F(v1, i) = result1[i] ? UINT_MAX : 0;
+                VR_UF(v1, i) = result1[i] ? UINT_MAX : 0;
             }
             if (result1[i]) low1 = min(low1, i);
             if (result2[i]) low2 = min(low2, i);
@@ -2550,7 +2550,7 @@ DEF_INST( vector_string_range_compare )
         break;
     }
 
-    if (!M6_RT) regs->VR_B(v1, 7) = min(low1, low2) * (1 << m5);;
+    if (!M6_RT) VR_UB(v1, 7) = min(low1, low2) * (1 << m5);;
     if (M6_CS) {               // if M6_CS (Condition Code Set)
         if (M6_ZS && (low1 >= low2))
             regs->psw.cc = 0;
@@ -2586,12 +2586,12 @@ DEF_INST( vector_permute )
     ZVECTOR_CHECK( regs );
 
     for (i=0; i < 16; i++) {
-        temp[i] = regs->VR_B(v2, i);
-        temp[i + 16] = regs->VR_B(v3, i);
+        temp[i] = VR_UB(v2, i);
+        temp[i + 16] = VR_UB(v3, i);
     }
     for (i=0; i < 16; i++) {
-        int x = regs->VR_B(v4, i) & 0x1f;
-        regs->VR_B(v1, i) = temp[x];
+        int x = VR_UB(v4, i) & 0x1f;
+        VR_UB(v1, i) = temp[x];
     }
 
     ZVECTOR_END( regs );
@@ -2611,8 +2611,8 @@ DEF_INST( vector_select )
 
     ZVECTOR_CHECK( regs );
 
-    regs->VR_D(v1, 1) = (regs->VR_D(v4, 1) & regs->VR_D(v2, 1)) | (~regs->VR_D(v4, 1) & regs->VR_D(v3, 1));
-    regs->VR_D(v1, 0) = (regs->VR_D(v4, 0) & regs->VR_D(v2, 0)) | (~regs->VR_D(v4, 0) & regs->VR_D(v3, 0));
+    VR_UD(v1, 1) = (VR_UD(v4, 1) & VR_UD(v2, 1)) | (~VR_UD(v4, 1) & VR_UD(v3, 1));
+    VR_UD(v1, 0) = (VR_UD(v4, 0) & VR_UD(v2, 0)) | (~VR_UD(v4, 0) & VR_UD(v3, 0));
     
     ZVECTOR_END( regs );
 }
@@ -2679,27 +2679,27 @@ DEF_INST( vector_pack )
     {
     case 1:
         for (i=0; i < 8; i++) {
-            temp16[i] = regs->VR_H(v2, i);
-            temp16[i+8] = regs->VR_H(v3, i);
+            temp16[i] = VR_UH(v2, i);
+            temp16[i+8] = VR_UH(v3, i);
         }
         for (i=0; i < 16; i++) 
-            regs->VR_B(v1, i) = (U8) temp16[i] & UCHAR_MAX;
+            VR_UB(v1, i) = temp16[i] & UCHAR_MAX;
         break;
     case 2:
         for (i=0; i < 4; i++) {
-            temp32[i] = regs->VR_F(v2, i);
-            temp32[i+4] = regs->VR_F(v3, i);
+            temp32[i] = VR_UF(v2, i);
+            temp32[i+4] = VR_UF(v3, i);
         }
         for (i=0; i < 8; i++) 
-            regs->VR_H(v1, i) = (U16) temp32[i] & USHRT_MAX;
+            VR_UH(v1, i) = temp32[i] & USHRT_MAX;
         break;
     case 3:
         for (i=0; i < 2; i++) {
-            temp64[i] = regs->VR_D(v2, i);
-            temp64[i+2] = regs->VR_D(v3, i);
+            temp64[i] = VR_UD(v2, i);
+            temp64[i+2] = VR_UD(v3, i);
         }
         for (i=0; i < 4; i++) 
-            regs->VR_F(v1, i) = (U32) temp64[i] & UINT_MAX;
+            VR_UF(v1, i) = temp64[i] & UINT_MAX;
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -2728,41 +2728,41 @@ DEF_INST(vector_pack_logical_saturate)
     {
     case 1:
         for (i=0; i < 8; i++) {
-              temp16[i]   = regs->VR_H(v2, i);
-              temp16[i+8] = regs->VR_H(v3, i);
+              temp16[i]   = VR_UH(v2, i);
+              temp16[i+8] = VR_UH(v3, i);
         }
         for (i=0; i < 16; i++) {
             if (temp16[i] > UCHAR_MAX) {
-                regs->VR_B(v1, i) = UCHAR_MAX;
+                VR_UB(v1, i) = UCHAR_MAX;
                 sat++;
             }
-            else regs->VR_B(v1, i) = (U8) temp16[i];
+            else VR_UB(v1, i) = temp16[i];
         }
         break;
     case 2:
         for (i=0; i < 4; i++) {
-              temp32[i]   = regs->VR_F(v2, i);
-              temp32[i+4] = regs->VR_F(v3, i);
+              temp32[i]   = VR_UF(v2, i);
+              temp32[i+4] = VR_UF(v3, i);
         }
         for (i=0; i < 8; i++) {
             if (temp32[i] > USHRT_MAX) {
-                regs->VR_H(v1, i) = USHRT_MAX;
+                VR_UH(v1, i) = USHRT_MAX;
                 sat++;
             }
-            else regs->VR_H(v1, i) = (U16) temp32[i];
+            else VR_UH(v1, i) = temp32[i];
         }
         break;
     case 3:
         for (i=0; i < 2; i++) {
-              temp64[i]   = regs->VR_D(v2, i);
-              temp64[i+2] = regs->VR_D(v3, i);
+              temp64[i]   = VR_UD(v2, i);
+              temp64[i+2] = VR_UD(v3, i);
         }
         for (i=0; i < 4; i++) {
             if (temp64[i] > UINT_MAX) {
-                regs->VR_F(v1, i) = UINT_MAX;
+                VR_UF(v1, i) = UINT_MAX;
                 sat++;
             }
-            else regs->VR_F(v1, i) = (U32) temp64[i];
+            else VR_UF(v1, i) = temp64[i];
         }
         break;
     default:
@@ -2802,41 +2802,41 @@ DEF_INST( vector_pack_saturate )
     {
     case 1:
         for (i=0; i < 8; i++) {
-              temp16[i]   = (S16) regs->VR_H(v2, i);
-              temp16[i+8] = (S16) regs->VR_H(v3, i);
+              temp16[i]   = VR_SH(v2, i);
+              temp16[i+8] = VR_SH(v3, i);
         }
         for (i=0; i < 16; i++) {
             if (temp16[i] > SCHAR_MAX) {
-                regs->VR_B(v1, i) = (U8) SCHAR_MAX;
+                VR_SB(v1, i) = SCHAR_MAX;
                 sat++;
             }
-            else regs->VR_B(v1, i) = (S8) temp16[i];
+            else VR_SB(v1, i) = temp16[i];
         }
         break;
     case 2:
         for (i=0; i < 4; i++) {
-              temp32[i]   = (S32) regs->VR_F(v2, i);
-              temp32[i+4] = (S32) regs->VR_F(v3, i);
+              temp32[i]   = VR_SF(v2, i);
+              temp32[i+4] = VR_SF(v3, i);
         }
         for (i=0; i < 8; i++) {
             if (temp32[i] > SHRT_MAX) {
-                regs->VR_H(v1, i) = (U16) SHRT_MAX;
+                VR_SH(v1, i) = SHRT_MAX;
                 sat++;
             }
-            else regs->VR_H(v1, i) = (S16) temp32[i];
+            else VR_SH(v1, i) = temp32[i];
         }
         break;
     case 3:
         for (i=0; i < 2; i++) {
-              temp64[i]   = (S64) regs->VR_D(v2, i);
-              temp64[i+2] = (S64) regs->VR_D(v3, i);
+              temp64[i]   = VR_SD(v2, i);
+              temp64[i+2] = VR_SD(v3, i);
         }
         for (i=0; i < 4; i++) {
             if (temp64[i] > INT_MAX) {
-                regs->VR_F(v1, i) = (U32) INT_MAX;
+                VR_SF(v1, i) = INT_MAX;
                 sat++;
             }
-            else regs->VR_F(v1, i) = (S32) temp64[i];
+            else VR_SF(v1, i) = temp64[i];
         }
         break;
     default:
@@ -2877,15 +2877,15 @@ DEF_INST( vector_multiply_logical_high )
     {
     case 0:
         for (i=0; i < 16; i++)
-            regs->VR_B(v1, i) = (regs->VR_B(v2, i) * regs->VR_B(v3, i)) >> 8;
+            VR_UB(v1, i) = (VR_UB(v2, i) * VR_UB(v3, i)) >> 8;
         break;
     case 1:
         for (i=0; i < 8; i++)
-            regs->VR_H(v1, i) = (regs->VR_H(v2, i) * regs->VR_H(v3, i)) >> 16;
+            VR_UH(v1, i) = (VR_UH(v2, i) * VR_UH(v3, i)) >> 16;
         break;
     case 2:
         for (i=0; i < 4; i++)
-            regs->VR_F(v1, i) = ((U64) (regs->VR_F(v2, i) * regs->VR_F(v3, i))) >> 32;
+            VR_UF(v1, i) = ((U64) (VR_UF(v2, i) * VR_UF(v3, i))) >> 32;
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -2913,15 +2913,15 @@ DEF_INST( vector_multiply_low )
     {
     case 0:
         for (i=0; i < 16; i++)
-            regs->VR_B(v1, i) = (regs->VR_B(v2, i) * regs->VR_B(v3, i)) & UCHAR_MAX;
+            VR_UB(v1, i) = (VR_UB(v2, i) * VR_UB(v3, i)) & UCHAR_MAX;
         break;
     case 1:
         for (i=0; i < 8; i++)
-            regs->VR_H(v1, i) = (regs->VR_H(v2, i) * regs->VR_H(v3, i)) & USHRT_MAX;
+            VR_UH(v1, i) = (VR_UH(v2, i) * VR_UH(v3, i)) & USHRT_MAX;
         break;
     case 2:
         for (i=0; i < 4; i++)
-            regs->VR_F(v1, i) = (regs->VR_F(v2, i) * regs->VR_F(v3, i)) & UINT_MAX;
+            VR_UF(v1, i) = (VR_UF(v2, i) * VR_UF(v3, i)) & UINT_MAX;
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -2949,15 +2949,15 @@ DEF_INST( vector_multiply_high )
     {
     case 0:
         for (i=0; i < 16; i++)
-            regs->VR_B(v1, i) = ((S8)regs->VR_B(v2, i) * (S8)regs->VR_B(v3, i)) >> 8;
+            VR_SB(v1, i) = (VR_SB(v2, i) * VR_SB(v3, i)) >> 8;
         break;
     case 1:
         for (i=0; i < 8; i++)
-            regs->VR_H(v1, i) = ((S16)regs->VR_H(v2, i) * (S16)regs->VR_H(v3, i)) >> 16;
+            VR_SH(v1, i) = (VR_SH(v2, i) * VR_SH(v3, i)) >> 16;
         break;
     case 2:
         for (i=0; i < 4; i++)
-            regs->VR_F(v1, i) = ((S64) ((S32)regs->VR_F(v2, i) * (S32)regs->VR_F(v3, i))) >> 32;
+            VR_SF(v1, i) = (S64)(VR_SF(v2, i) * VR_SF(v3, i)) >> 32;
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -2985,15 +2985,15 @@ DEF_INST( vector_multiply_logical_even )
     {
     case 0:
         for (i = 0; i < 8; i++)
-            regs->VR_H(v1, i) = (U16) regs->VR_B(v2, i*2) * regs->VR_B(v3, i*2);
+            VR_UH(v1, i) = VR_UB(v2, i*2) * VR_UB(v3, i*2);
         break;
     case 1:
         for (i = 0; i < 4; i++)
-            regs->VR_F(v1, i) = (U32) regs->VR_H(v2, i*2) * regs->VR_H(v3, i*2);
+            VR_UF(v1, i) = VR_UH(v2, i*2) * VR_UH(v3, i*2);
         break;
     case 2:
         for (i = 0; i < 2; i++)
-            regs->VR_D(v1, i) = (U64) regs->VR_F(v2, i*2) * regs->VR_F(v3, i*2);
+            VR_UD(v1, i) = (U64)(VR_UF(v2, i*2) * VR_UF(v3, i*2));
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -3020,15 +3020,15 @@ DEF_INST( vector_multiply_logical_odd )
     {
     case 0:
         for (i = 0; i < 8; i++)
-            regs->VR_H(v1, i) = (U16) regs->VR_B(v2, i*2+1) * regs->VR_B(v3, i*2+1);
+            VR_UH(v1, i) = VR_UB(v2, i*2+1) * VR_UB(v3, i*2+1);
         break;
     case 1:
         for (i = 0; i < 4; i++)
-            regs->VR_F(v1, i) = (U32) regs->VR_H(v2, i*2+1) * regs->VR_H(v3, i*2+1);
+            VR_UF(v1, i) = VR_UH(v2, i*2+1) * VR_UH(v3, i*2+1);
         break;
     case 2:
         for (i = 0; i < 2; i++)
-            regs->VR_D(v1, i) = (U64) regs->VR_F(v2, i*2+1) * regs->VR_F(v3, i*2+1);
+            VR_UD(v1, i) = (U64)(VR_UF(v2, i*2+1) * VR_UF(v3, i*2+1));
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -3055,15 +3055,15 @@ DEF_INST( vector_multiply_even )
     {
     case 0:
         for (i = 0; i < 8; i++)
-            regs->VR_H(v1, i) = (S16)( (S8)regs->VR_B(v2, i*2) * (S8)regs->VR_B(v3, i*2) );
+            VR_SH(v1, i) = VR_SB(v2, i * 2) * VR_SB(v3, i * 2);
         break;
     case 1:
         for (i = 0; i < 4; i++)
-            regs->VR_F(v1, i) = (S32)( (S16)regs->VR_H(v2, i*2) * (S16)regs->VR_H(v3, i*2) );
+            VR_SF(v1, i) = VR_SH(v2, i*2) * VR_SH(v3, i*2);
         break;
     case 2:
         for (i = 0; i < 2; i++)
-            regs->VR_D(v1, i) = (S64)( (S32)regs->VR_F(v2, i*2) * (S32)regs->VR_F(v3, i*2) );
+            VR_SD(v1, i) = (S64)(VR_SF(v2, i*2) * VR_SF(v3, i*2));
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -3090,15 +3090,15 @@ DEF_INST( vector_multiply_odd )
     {
     case 0:
         for (i = 0; i < 8; i++)
-            regs->VR_H(v1, i) = (S16)( (S8)regs->VR_B(v2, i*2+1) * (S8)regs->VR_B(v3, i*2+1) );
+            VR_SH(v1, i) = VR_SB(v2, i*2+1) * VR_SB(v3, i*2+1);
         break;
     case 1:
         for (i = 0; i < 4; i++)
-            regs->VR_F(v1, i) = (S32)( (S16)regs->VR_H(v2, i*2+1) * (S16)regs->VR_H(v3, i*2+1) );
+            VR_SF(v1, i) = VR_SH(v2, i*2+1) * VR_SH(v3, i*2+1);
         break;
     case 2:
         for (i = 0; i < 2; i++)
-            regs->VR_D(v1, i) = (S64)( (S32)regs->VR_F(v2, i*2+1) * (S32)regs->VR_F(v3, i*2+1) );
+            VR_SD(v1, i) = (S64)(VR_SF(v2, i*2+1) * VR_SF(v3, i*2+1));
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -3124,15 +3124,15 @@ DEF_INST( vector_multiply_and_add_logical_high )
     {
     case 0:
         for (i = 0; i < 16; i++)
-            regs->VR_B(v1, i) = (regs->VR_B(v2, i) * regs->VR_B(v3, i) + regs->VR_B(v4, i)) >> 8 & UCHAR_MAX;
+            VR_UB(v1, i) = (VR_UB(v2, i) * VR_UB(v3, i) + VR_UB(v4, i)) >> 8 & UCHAR_MAX;
         break;
     case 1:
         for (i=0; i < 8; i++)
-            regs->VR_H(v1, i) = (regs->VR_H(v2, i) * regs->VR_H(v3, i) + regs->VR_H(v4, i)) >> 16 & USHRT_MAX;
+            VR_UH(v1, i) = (VR_UH(v2, i) * VR_UH(v3, i) + VR_UH(v4, i)) >> 16 & USHRT_MAX;
         break;
     case 2:
         for (i=0; i < 4; i++)
-            regs->VR_F(v1, i) = (U64)(regs->VR_F(v2, i) * regs->VR_F(v3, i) + regs->VR_F(v4, i)) >> 32 & UINT_MAX;
+            VR_UF(v1, i) = (U64)(VR_UF(v2, i) * VR_UF(v3, i) + VR_UF(v4, i)) >> 32 & UINT_MAX;
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -3159,15 +3159,15 @@ DEF_INST(vector_multiply_and_add_low)
     {
     case 0:
         for (i = 0; i < 16; i++)
-            regs->VR_B(v1, i) = ((S8)regs->VR_B(v2, i) * (S8)regs->VR_B(v3, i) + (S8)regs->VR_B(v4, i)) & UCHAR_MAX;
+            VR_SB(v1, i) = VR_SB(v2, i) * VR_SB(v3, i) + VR_SB(v4, i);
         break;
     case 1:
         for (i=0; i < 8; i++)
-            regs->VR_H(v1, i) = ((S16)regs->VR_H(v2, i) * (S16)regs->VR_H(v3, i) + (S16)regs->VR_H(v4, i)) & USHRT_MAX;
+            VR_SH(v1, i) = VR_SH(v2, i) * VR_SH(v3, i) + VR_SH(v4, i);
         break;
     case 2:
-        for (i=0; i < 4; i++)
-            regs->VR_F(v1, i) = ((S32)regs->VR_F(v2, i) * (S32)regs->VR_F(v3, i) + (S32)regs->VR_F(v4, i)) & UINT_MAX;
+        for (i = 0; i < 4; i++)
+            VR_SF(v1, i) = (S64)(VR_SF(v2, i) * VR_SF(v3, i) + VR_SF(v4, i));
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -3194,15 +3194,15 @@ DEF_INST( vector_multiply_and_add_high )
     {
     case 0:
         for (i = 0; i < 16; i++)
-            regs->VR_B(v1, i) = ((S8)regs->VR_B(v2, i) * (S8)regs->VR_B(v3, i) + (S8)regs->VR_B(v4, i)) >> 8 & UCHAR_MAX;
+            VR_SB(v1, i) = (VR_SB(v2, i) * VR_SB(v3, i) + VR_SB(v4, i)) >> 8;
         break;
     case 1:
-        for (i=0; i < 8; i++)
-            regs->VR_H(v1, i) = ((S16)regs->VR_H(v2, i) * (S16)regs->VR_H(v3, i) + (S16)regs->VR_H(v4, i)) >> 16 & USHRT_MAX;
+        for (i = 0; i < 8; i++)
+            VR_SH(v1, i) = (VR_SH(v2, i) * VR_SH(v3, i) + VR_SH(v4, i)) >> 16;
         break;
     case 2:
-        for (i=0; i < 4; i++)
-            regs->VR_F(v1, i) = (S64)((S32)regs->VR_F(v2, i) * (S32)regs->VR_F(v3, i) + (S32)regs->VR_F(v4, i)) >> 32 & UINT_MAX;
+        for (i = 0; i < 4; i++)
+            VR_SF(v1, i) = (S64)(VR_SF(v2, i) * VR_SF(v3, i) + VR_SF(v4, i)) >> 32;
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -3229,15 +3229,15 @@ DEF_INST( vector_multiply_and_add_logical_even )
     {
     case 0:
         for (i = 0; i < 8; i++)
-            regs->VR_H(v1, i) = (U16) regs->VR_B(v2, i*2) * regs->VR_B(v3, i*2) + regs->VR_B(v4, i*2);
+            VR_UH(v1, i) = VR_UB(v2, i*2) * VR_UB(v3, i*2) + VR_UB(v4, i*2);
         break;
     case 1:
         for (i = 0; i < 4; i++)
-            regs->VR_F(v1, i) = (U32) regs->VR_H(v2, i*2) * regs->VR_H(v3, i*2) + regs->VR_H(v4, i*2);
+            VR_UF(v1, i) = VR_UH(v2, i*2) * VR_UH(v3, i*2) + VR_UH(v4, i*2);
         break;
     case 2:
         for (i = 0; i < 2; i++)
-            regs->VR_D(v1, i) = (U64) regs->VR_F(v2, i*2) * regs->VR_F(v3, i*2) + regs->VR_F(v4, i*2);
+            VR_UD(v1, i) = (U64)(VR_UF(v2, i*2) * VR_UF(v3, i*2) + VR_UF(v4, i*2));
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -3263,15 +3263,15 @@ DEF_INST( vector_multiply_and_add_logical_odd )
     {
     case 0:
         for (i = 0; i < 8; i++)
-            regs->VR_H(v1, i) = (U16) regs->VR_B(v2, i*2+1) * regs->VR_B(v3, i*2+1) + regs->VR_B(v4, i*2+1);
+            VR_UH(v1, i) = VR_UB(v2, i*2+1) * VR_UB(v3, i*2+1) + VR_UB(v4, i*2+1);
         break;
     case 1:
         for (i = 0; i < 4; i++)
-            regs->VR_F(v1, i) = (U32) regs->VR_H(v2, i*2+1) * regs->VR_H(v3, i*2+1) + regs->VR_H(v4, i*2+1);
+            VR_UF(v1, i) = VR_UH(v2, i*2+1) * VR_UH(v3, i*2+1) + VR_UH(v4, i*2+1);
         break;
     case 2:
         for (i = 0; i < 2; i++)
-            regs->VR_D(v1, i) = (U64) regs->VR_F(v2, i*2+1) * regs->VR_F(v3, i*2+1) + regs->VR_F(v4, i*2+1);
+            VR_UD(v1, i) = (U64)(VR_UF(v2, i*2+1) * VR_UF(v3, i*2+1) + VR_UF(v4, i*2+1));
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -3298,15 +3298,15 @@ DEF_INST( vector_multiply_and_add_even )
     {
     case 0:
         for (i = 0; i < 8; i++)
-            regs->VR_H(v1, i) = (S16)(S8)regs->VR_B(v2, i*2) * (S8)regs->VR_B(v3, i*2) + (S8)regs->VR_B(v4, i*2);
+            VR_SH(v1, i) = VR_SB(v2, i*2) * VR_SB(v3, i*2) + VR_SB(v4, i*2);
         break;
     case 1:
         for (i = 0; i < 4; i++)
-            regs->VR_F(v1, i) = (U32)(S16)regs->VR_H(v2, i*2) * (S16)regs->VR_H(v3, i*2) + (S16)regs->VR_H(v4, i*2);
+            VR_SF(v1, i) = VR_SH(v2, i*2) * VR_SH(v3, i*2) + VR_SH(v4, i*2);
         break;
     case 2:
         for (i = 0; i < 2; i++)
-            regs->VR_D(v1, i) = (U64)(S32)regs->VR_F(v2, i*2) * (S32)regs->VR_F(v3, i*2) + (S32)regs->VR_F(v4, i*2);
+            VR_SD(v1, i) = (U64)(VR_SF(v2, i*2) * VR_SF(v3, i*2) + VR_SF(v4, i*2));
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -3332,15 +3332,15 @@ DEF_INST( vector_multiply_and_add_odd )
     {
     case 0:
         for (i = 0; i < 8; i++)
-            regs->VR_H(v1, i) = (S16)(S8)regs->VR_B(v2, i*2+1) * (S8)regs->VR_B(v3, i*2+1) + (S8)regs->VR_B(v4, i*2+1);
+            VR_SH(v1, i) = VR_SB(v2, i*2+1) * VR_SB(v3, i*2+1) + VR_SB(v4, i*2+1);
         break;
     case 1:
         for (i = 0; i < 4; i++)
-            regs->VR_F(v1, i) = (U32)(S16)regs->VR_H(v2, i*2+1) * (S16)regs->VR_H(v3, i*2+1) + (S16)regs->VR_H(v4, i*2+1);
+            VR_SF(v1, i) = VR_SH(v2, i*2+1) * VR_SH(v3, i*2+1) + VR_SH(v4, i*2+1);
         break;
     case 2:
         for (i = 0; i < 2; i++)
-            regs->VR_D(v1, i) = (U64)(S32)regs->VR_F(v2, i*2+1) * (S32)regs->VR_F(v3, i*2+1) + (S32)regs->VR_F(v4, i*2+1);
+            VR_SD(v1, i) = (U64)(VR_SF(v2, i*2+1) * VR_SF(v3, i*2+1) + VR_SF(v4, i*2+1));
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -3359,11 +3359,67 @@ DEF_INST( vector_galois_field_multiply_sum )
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
+
+#if defined(_M_X64) || defined( __SSE2__ )
+    __m128i result;
+    int i;
+
+    switch (m4)
+    {
+    case 0:
+        U16 tempH[16];
+        for (i=0; i < 16; i++) {
+            U64 a = VR_UB(v2, i);
+            U64 b = VR_UB(v3, i);
+            result = _mm_clmulepi64_si128(_mm_set_epi64x(0, a), _mm_set_epi64x(0, b), 0);
+            tempH[i] = _mm_cvtsi128_si16(result);
+        }
+        for (i=0; i < 8; i++) {
+            VR_UH(v1, i) = tempH[i * 2] ^ tempH[i * 2 + 1];
+        }
+        break;
+    case 1:
+        U32 tempF[8];
+        for (i=0; i < 8; i++) {
+            U64 a = VR_UH(v2, i);
+            U64 b = VR_UH(v3, i);
+            result = _mm_clmulepi64_si128(_mm_set_epi64x(0, a), _mm_set_epi64x(0, b), 0);
+            tempF[i] = _mm_cvtsi128_si32(result);
+        }
+        for (i=0; i < 4; i++) {
+            VR_UF(v1, i) = tempF[i * 2] ^ tempF[i * 2 + 1];
+        }
+        break;
+    case 2:
+        U64 tempG[4];
+        for (i=0; i < 4; i++) {
+            U64 a = VR_UF(v2, i);
+            U64 b = VR_UF(v3, i);
+            result = _mm_clmulepi64_si128(_mm_set_epi64x(0, a), _mm_set_epi64x(0, b), 0);
+            tempG[i] = _mm_cvtsi128_si64(result);
+        }
+        for (i=0; i < 2; i++) {
+            VR_UD(v1, i) = tempG[i * 2] ^ tempG[i * 2 + 1];
+        }
+        break;
+    case 3:
+        __m128i tempQ[2];
+        for (i=0; i < 2; i++) {
+            U64 a = VR_UD(v2, i);
+            U64 b = VR_UD(v3, i);
+            tempQ[i] = _mm_clmulepi64_si128(_mm_set_epi64x(0, a), _mm_set_epi64x(0, b), 0);
+        }
+        VR_UD(v1, 1) = tempQ[0].m128i_u64[0] ^ tempQ[1].m128i_u64[0];
+        VR_UD(v1, 0) = tempQ[0].m128i_u64[1] ^ tempQ[1].m128i_u64[1];
+        break;
+    default:
+        ARCH_DEP(program_interrupt) (regs, PGM_SPECIFICATION_EXCEPTION);
+        break;
+    }
+#else
     if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+#endif
+
     ZVECTOR_END( regs );
 }
 
@@ -3373,15 +3429,30 @@ DEF_INST( vector_galois_field_multiply_sum )
 DEF_INST( vector_add_with_carry_compute_carry )
 {
     int     v1, v2, v3, v4, m5, m6;
-
+    U64     high, low, carry;
+    
     VRR_D( inst, regs, v1, v2, v3, v4, m5, m6 );
 
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    switch (m5)
+    {
+    case 4:
+        low = VR_UD(v2, 1) + VR_UD(v3, 1);
+        high = VR_UD(v2, 0) + VR_UD(v3, 0);
+        if (low < VR_UD(v2, 1))
+            high++;
+        carry = VR_UD(v4, 1) & 0x01;
+        if ((low + carry) < low)
+            high++;
+        low = low + carry;
+        VR_UD(v1, 1) = high < VR_UD(v2, 0) ? 1 : 0;
+        break;
+    default:
+        ARCH_DEP(program_interrupt) (regs, PGM_SPECIFICATION_EXCEPTION);
+        break;
+    }
+
     ZVECTOR_END( regs );
 }
 
@@ -3413,11 +3484,69 @@ DEF_INST( vector_galois_field_multiply_sum_and_accumulate )
     VRR_D( inst, regs, v1, v2, v3, v4, m5, m6 );
 
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
+
+#if defined(_M_X64) || defined( __SSE2__ )
+    __m128i result;
+    int     i;
+
+    switch (m5)
+    {
+    case 0:
+        U16 tempH[16];
+        for (i=0; i < 16; i++) {
+            U64 a = VR_UB(v2, i);
+            U64 b = VR_UB(v3, i);
+            result = _mm_clmulepi64_si128(_mm_set_epi64x(0, a), _mm_set_epi64x(0, b), 0);
+            tempH[i] = _mm_cvtsi128_si16(result);  
+        }
+        for (i=0; i < 8; i++) {
+            VR_UH(v1, i) = tempH[i*2] ^ tempH[i*2 + 1] ^ VR_UH(v4, i);
+        }
+        break;
+    case 1:
+        U32 tempF[8];
+        for (i=0; i < 8; i++) {
+            U64 a = VR_UH(v2, i);
+            U64 b = VR_UH(v3, i);
+            result = _mm_clmulepi64_si128(_mm_set_epi64x(0, a), _mm_set_epi64x(0, b), 0);
+            tempF[i] = _mm_cvtsi128_si32(result);
+        }
+        for (i=0; i < 4; i++) {
+            VR_UF(v1, i) = tempF[i * 2] ^ tempF[i * 2 + 1] ^ VR_UF(v4, i);
+        }
+        break;
+    case 2:
+        U64 tempG[4];
+        for (i=0; i < 4; i++) {
+            U64 a = VR_UF(v2, i);
+            U64 b = VR_UF(v3, i);
+            result = _mm_clmulepi64_si128(_mm_set_epi64x(0, a), _mm_set_epi64x(0, b), 0);
+            tempG[i] = _mm_cvtsi128_si64(result);
+        }
+        for (i=0; i < 2; i++) {
+            VR_UD(v1, i) = tempG[i * 2] ^ tempG[i * 2 + 1] ^ VR_UD(v4, i);
+        }
+        break;
+    case 3:
+        __m128i tempQ[2];
+        for (i=0; i < 2; i++) {
+            U64 a = VR_UD(v2, i);
+            U64 b = VR_UD(v3, i);
+            tempQ[i] = _mm_clmulepi64_si128(_mm_set_epi64x(0, a), _mm_set_epi64x(0, b), 0);
+        }
+        result = _mm_set_epi64x(VR_UD(v4,0), VR_UD(v4, 1));
+        VR_UD(v1, 1) = tempQ[0].m128i_u64[0] ^ tempQ[1].m128i_u64[0] ^ result.m128i_u64[0];
+        VR_UD(v1, 0) = tempQ[0].m128i_u64[1] ^ tempQ[1].m128i_u64[1] ^ result.m128i_u64[1];
+        break;
+    default:
+        ARCH_DEP(program_interrupt) (regs, PGM_SPECIFICATION_EXCEPTION);
+        break;
+    }
+
+#else
     if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+#endif
+
     ZVECTOR_END( regs );
 }
 
@@ -3676,21 +3805,21 @@ DEF_INST( vector_unpack_logical_low )
     {
     case 0:
         for (i=0; i < 8; i++)
-            temp16[i] = (U16) regs->VR_B(v2, i + 8);
+            temp16[i] = VR_UB(v2, i + 8);
         for (i=0; i < 8; i++)
-            regs->VR_H(v1, i) = temp16[i];
+            VR_UH(v1, i) = temp16[i];
         break;
     case 1:
         for (i=0; i < 4; i++)
-            temp32[i] = (U32) regs->VR_H(v2, i + 4);
+            temp32[i] = VR_UH(v2, i + 4);
         for (i=0; i < 4; i++)
-            regs->VR_F(v1, i) = temp32[i];
+            VR_UF(v1, i) = temp32[i];
         break;
     case 2:
         for (i=0; i < 2; i++)
-            temp64[i] = (U64) regs->VR_F(v2, i + 2);
+            temp64[i] = VR_UF(v2, i + 2);
         for (i=0; i < 2; i++)
-            regs->VR_D(v1, i) = temp64[i];
+            VR_UD(v1, i) = temp64[i];
         break;
     default:
         ARCH_DEP(program_interrupt) (regs, PGM_SPECIFICATION_EXCEPTION);
@@ -3721,21 +3850,21 @@ DEF_INST( vector_unpack_logical_high )
     {
     case 0:
         for (i=0; i < 8; i++)
-            temp16[i] = (U16) regs->VR_B(v2, i);
+            temp16[i] = VR_UB(v2, i);
         for (i=0; i < 8; i++)
-            regs->VR_H(v1, i) = temp16[i];
+            VR_UH(v1, i) = temp16[i];
         break;
     case 1:
         for (i=0; i < 4; i++)
-            temp32[i] = (U32) regs->VR_H(v2, i);
+            temp32[i] = VR_UH(v2, i);
         for (i=0; i < 4; i++)
-            regs->VR_F(v1, i) = temp32[i];
+            VR_UF(v1, i) = temp32[i];
         break;
     case 2:
         for (i=0; i < 2; i++)
-            temp64[i] = (U64) regs->VR_F(v2, i);
+            temp64[i] = VR_UF(v2, i);
         for (i=0; i < 2; i++)
-            regs->VR_D(v1, i) = temp64[i];
+            VR_UD(v1, i) = temp64[i];
         break;
     default:
         ARCH_DEP(program_interrupt) (regs, PGM_SPECIFICATION_EXCEPTION);
@@ -3766,21 +3895,21 @@ DEF_INST( vector_unpack_low )
     {
     case 0:
         for (i=0; i < 8; i++)
-            temp16[i] = (S16)(S8) regs->VR_B(v2, i + 8);
+            temp16[i] = VR_SB(v2, i + 8);
         for (i=0; i < 8; i++)
-            regs->VR_H(v1, i) = temp16[i];
+            VR_SH(v1, i) = temp16[i];
         break;
     case 1:
         for (i=0; i < 4; i++)
-            temp32[i] = (S32)(S16) regs->VR_H(v2, i + 4);
+            temp32[i] = VR_SH(v2, i + 4);
         for (i=0; i < 4; i++)
-            regs->VR_F(v1, i) = temp32[i];
+            VR_SF(v1, i) = temp32[i];
         break;
     case 2:
         for (i=0; i < 2; i++)
-            temp64[i] = (S64)(S32) regs->VR_F(v2, i + 2);
+            temp64[i] = VR_SF(v2, i + 2);
         for (i=0; i < 2; i++)
-            regs->VR_D(v1, i) = temp64[i];
+            VR_SD(v1, i) = temp64[i];
         break;
     default:
         ARCH_DEP(program_interrupt) (regs, PGM_SPECIFICATION_EXCEPTION);
@@ -3811,21 +3940,21 @@ DEF_INST( vector_unpack_high )
     {
     case 0:
         for (i=0; i < 8; i++)
-            temp16[i] = (S16)(S8) regs->VR_B(v2, i);
+            temp16[i] = VR_SB(v2, i);
         for (i=0; i < 8; i++)
-            regs->VR_H(v1, i) = temp16[i];
+            VR_SH(v1, i) = temp16[i];
         break;
     case 1:
         for (i=0; i < 4; i++)
-            temp32[i] = (S32)(S16) regs->VR_H(v2, i);
+            temp32[i] = VR_SH(v2, i);
         for (i=0; i < 4; i++)
-            regs->VR_F(v1, i) = temp32[i];
+            VR_SF(v1, i) = temp32[i];
         break;
     case 2:
         for (i=0; i < 2; i++)
-            temp64[i] = (S64)(S32) regs->VR_F(v2, i);
+            temp64[i] = VR_SF(v2, i);
         for (i=0; i < 2; i++)
-            regs->VR_D(v1, i) = temp64[i];
+            VR_SD(v1, i) = temp64[i];
         break;
     default:
         ARCH_DEP(program_interrupt) (regs, PGM_SPECIFICATION_EXCEPTION);
@@ -4121,31 +4250,31 @@ DEF_INST(vector_add)
     {
     case 0:
         for (i=0; i < 16; i++) {
-            regs->VR_B(v1, i) = (S8) regs->VR_B(v2, i) + (S8) regs->VR_B(v3, i);
+            VR_SB(v1, i) = VR_SB(v2, i) + VR_SB(v3, i);
         }
         break;
     case 1:
         for (i=0; i < 8; i++) {
-            regs->VR_H(v1, i) = (S16) regs->VR_H(v2, i) + (S16) regs->VR_H(v3, i);
+            VR_SH(v1, i) = VR_SH(v2, i) + VR_SH(v3, i);
         }
         break;
     case 2:
         for (i=0; i < 4; i++) {
-            regs->VR_F(v1, i) = (S32) regs->VR_F(v2, i) + (S32) regs->VR_F(v3, i);
+            VR_SF(v1, i) = VR_SF(v2, i) + VR_SF(v3, i);
         }
         break;
     case 3:
         for (i=0; i < 2; i++) {
-            regs->VR_D(v1, i) = (S64) regs->VR_D(v2, i) + (S64) regs->VR_D(v3, i);
+            VR_SD(v1, i) = VR_SD(v2, i) + VR_SD(v3, i);
         }
         break;
     case 4:
-        high = regs->VR_D(v2, 0) + regs->VR_D(v3, 0);
-        low  = regs->VR_D(v2, 1) + regs->VR_D(v3, 1);
-        if (low < regs->VR_D(v2, 1))
+        high = VR_UD(v2, 0) + VR_UD(v3, 0);
+        low  = VR_UD(v2, 1) + VR_UD(v3, 1);
+        if (low < VR_UD(v2, 1))
             high++;
-        regs->VR_D(v1, 0) = high;
-        regs->VR_D(v1, 1) = low; 
+        VR_UD(v1, 0) = high;
+        VR_UD(v1, 1) = low; 
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -4189,31 +4318,31 @@ DEF_INST(vector_subtract)
     {
     case 0:
         for (i=0; i < 16; i++) {
-            regs->VR_B(v1, i) = (S8) regs->VR_B(v2, i) - (S8) regs->VR_B(v3, i);
+            VR_SB(v1, i) = VR_SB(v2, i) - VR_SB(v3, i);
         }
         break;
     case 1:
         for (i=0; i < 8; i++) {
-            regs->VR_H(v1, i) = (S16) regs->VR_H(v2, i) - (S16) regs->VR_H(v3, i);
+            VR_SH(v1, i) = VR_SH(v2, i) - VR_SH(v3, i);
         }
         break;
     case 2:
         for (i=0; i < 4; i++) {
-            regs->VR_F(v1, i) = (S32) regs->VR_F(v2, i) - (S32) regs->VR_F(v3, i);
+            VR_SF(v1, i) = VR_SF(v2, i) - VR_SF(v3, i);
         }
         break;
     case 3:
         for (i=0; i < 2; i++) {
-            regs->VR_D(v1, i) = (S64)regs->VR_D(v2, i) - (S64)regs->VR_D(v3, i);
+            VR_SD(v1, i) = VR_SD(v2, i) - VR_SD(v3, i);
         }
         break;
     case 4:
-        high = regs->VR_D(v2, 0) - regs->VR_D(v3, 0);
-        low  = regs->VR_D(v2, 1) - regs->VR_D(v3, 2);
-        if (low > regs->VR_D(v2, 1))
+        high = VR_UD(v2, 0) - VR_UD(v3, 0);
+        low  = VR_UD(v2, 1) - VR_UD(v3, 2);
+        if (low > VR_UD(v2, 1))
             high--;
-        regs->VR_D(v1, 0) = high;
-        regs->VR_D(v1, 1) = low;
+        VR_UD(v1, 0) = high;
+        VR_UD(v1, 1) = low;
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -4240,48 +4369,48 @@ DEF_INST( vector_compare_equal )
     {
     case 0:
         for (i=0; i < 16; i++) {
-            if (regs->VR_B(v2, i) == regs->VR_B(v3, i)) {
-                regs->VR_B(v1, i) = UCHAR_MAX;
+            if (VR_UB(v2, i) == VR_UB(v3, i)) {
+                VR_UB(v1, i) = UCHAR_MAX;
                 eq++;
             }
             else {
-                regs->VR_B(v1, i) = 0;
+                VR_UB(v1, i) = 0;
                 ne++;
             }
         }
         break;
     case 1:
         for (i=0; i < 8; i++) {
-            if (regs->VR_H(v2, i) == regs->VR_H(v3, i)) {
-                regs->VR_H(v1, i) = USHRT_MAX;
+            if (VR_UH(v2, i) == VR_UH(v3, i)) {
+                VR_UH(v1, i) = USHRT_MAX;
                 eq++;
             }
             else {
-                regs->VR_H(v1, i) = 0;
+                VR_UH(v1, i) = 0;
                 ne++;
             }
         }
         break;
     case 2:
         for (i=0; i < 4; i++) {
-            if (regs->VR_F(v2, i) == regs->VR_F(v3, i)) {
-                regs->VR_F(v1, i) = UINT_MAX;
+            if (VR_UF(v2, i) == VR_UF(v3, i)) {
+                VR_UF(v1, i) = UINT_MAX;
                 eq++;
             }
             else {
-                regs->VR_F(v1, i) = 0;
+                VR_UF(v1, i) = 0;
                 ne++;
             }
         }
         break;
     case 3:
         for (i=0; i < 2; i++) {
-            if (regs->VR_D(v2, i) == regs->VR_D(v3, i)) {
-                regs->VR_D(v1, i) = ULLONG_MAX;
+            if (VR_UD(v2, i) == VR_UD(v3, i)) {
+                VR_UD(v1, i) = ULLONG_MAX;
                 eq++;
             }
             else {
-                regs->VR_D(v1, i) = 0;
+                VR_UD(v1, i) = 0;
                 ne++;
             }
         }

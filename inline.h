@@ -312,6 +312,134 @@ inline QW bswap_128( QW input )
     return swapped;
 }
 
+/*-------------------------------------------------------------------*/
+/* Population count - return number of bit ones                      */
+/*-------------------------------------------------------------------*/
+inline U8 population_count8(U8 input)
+{
+    U8 result = 0;
+    for (; input; result++)
+        input &= input - 1;
+    return result;
+}
+inline U16 population_count16(U16 input)
+{
+    U16 result = 0;
+    for (; input; result++)
+        input &= input - 1;
+    return result;
+}
+inline U32 population_count32(U32 input)
+{
+    U32 result = 0;
+    for (; input; result++)
+        input &= input - 1;
+    return result;
+}
+inline U64 population_count64(U64 input)
+{
+    U64 result = 0;
+    for (; input; result++)
+        input &= input - 1;
+    return result;
+}
+
+/*-------------------------------------------------------------------*/
+/* Trailing zeros - return number of trailing bit zeros              */
+/*-------------------------------------------------------------------*/
+inline U8 trailing_zeros8(U8 input)
+{
+    U8 result = 0;
+    if (input == 0)
+        return 8;
+    while ((input & 1) == 0) {
+        result += 1;
+        input >>= 1;
+    }
+    return result;
+}
+inline U16 trailing_zeros16(U16 input)
+{
+    U16 result = 0;
+    if (input == 0)
+        return 16;
+    while ((input & 1) == 0) {
+        result += 1;
+        input >>= 1;
+    }
+    return result;
+}
+inline U32 trailing_zeros32(U32 input)
+{
+    U32 result = 0;
+    if (input == 0)
+        return 32;
+    while ((input & 1) == 0) {
+        result += 1;
+        input >>= 1;
+    }
+    return result;
+}
+inline U64 trailing_zeros64(U64 input)
+{
+    U64 result = 0;
+    if (input == 0)
+        return 64;
+    while ((input & 1) == 0) {
+        result += 1;
+        input >>= 1;
+    }
+    return result;
+}
+
+/*-------------------------------------------------------------------*/
+/* Leading  zeros - return number of leading  bit zeros              */
+/*-------------------------------------------------------------------*/
+inline U8 leading_zeros8(U8 input)
+{
+    U8 result = 0;
+    if (input == 0)
+        return 8;
+    while ((input & 0x80u) == 0) {
+        result += 1;
+        input <<= 1;
+    }
+    return result;
+}
+inline U16 leading_zeros16(U16 input)
+{
+    U16 result = 0;
+    if (input == 0)
+        return 16;
+    while ((input & 0x8000u) == 0) {
+        result += 1;
+        input <<= 1;
+    }
+    return result;
+}
+inline U32 leading_zeros32(U32 input)
+{
+    U32 result = 0;
+    if (input == 0)
+        return 32;
+    while ((input & 0x80000000ul) == 0) {
+        result += 1;
+        input <<= 1;
+    }
+    return result;
+}
+inline U64 leading_zeros64(U64 input)
+{
+    U64 result = 0;
+    if (input == 0)
+        return 64;
+    while ((input & 0x8000000000000000ull) == 0) {
+        result += 1;
+        input <<= 1;
+    }
+    return result;
+}
+
 #endif // defined( _INLINE_H )
 
 /*-------------------------------------------------------------------*/

@@ -115,8 +115,8 @@ DEF_INST( vector_load_logical_element_and_zero )
 #if defined(_M_X64) || defined( __SSE2__ )
     regs->VR_Q( v1 ).v = _mm_setzero_si128();
 #else
-    regs->VR_D(v1, 0) = 0x00;
-    regs->VR_D(v1, 1) = 0x00;
+    regs->VR_D(v1, 0) = 0;
+    regs->VR_D(v1, 1) = 0;
 #endif
 
     switch (m3)
@@ -186,6 +186,8 @@ DEF_INST( vector_load )
 
     VRX( inst, regs, v1, x2, b2, effective_addr2, m3);
 
+    UNREFERENCED(m3);              // Alignment hint      
+    
     ZVECTOR_CHECK( regs );
     PER_ZEROADDR_XCHECK2( regs, x2, b2 );
 
@@ -315,6 +317,8 @@ DEF_INST( vector_store )
     VADR    effective_addr2;
 
     VRX( inst, regs, v1, x2, b2, effective_addr2, m3 );
+
+    UNREFERENCED(m3);              // Alignment hint      
 
     ZVECTOR_CHECK( regs );
     PER_ZEROADDR_XCHECK2( regs, x2, b2 );
@@ -622,6 +626,8 @@ DEF_INST( vector_load_multiple )
 
     VRS_A( inst, regs, v1, v3, b2, effective_addr2, m4 );
 
+    UNREFERENCED(m4);              // Alignment hint      
+
     ZVECTOR_CHECK( regs );
     PER_ZEROADDR_XCHECK( regs, b2 );
 
@@ -649,14 +655,16 @@ DEF_INST( vector_load_with_length )
 
     VRS_B( inst, regs, v1, r3, b2, effective_addr2, m4 );
 
+    UNREFERENCED(m4);              // Not used
+
     ZVECTOR_CHECK( regs );
     PER_ZEROADDR_XCHECK( regs, b2 );
 
-    memset(&temp, 0x00, sizeof(temp));
+    memset(&temp, 0, sizeof(temp));
 
     ARCH_DEP( vfetchc )( &temp, min(regs->GR_L(r3), 15), effective_addr2, b2, regs );
     
-    for(i=0; i < 16; i++)
+    for (i=0; i < 16; i++)
         regs->VR_B(v1, i) = temp[i];
 
     ZVECTOR_END( regs );
@@ -684,7 +692,7 @@ DEF_INST( vector_element_shift_right_logical )
     case 1:
         shift = b2 % 16;
         for (i=0; i < 8; i++)
-            regs->VR_H( v1, i ) = regs->VR_B( v3, i ) >> shift;
+            regs->VR_H( v1, i ) = regs->VR_H( v3, i ) >> shift;
         break;
     case 2:
         shift = b2 % 32;
@@ -726,7 +734,7 @@ DEF_INST( vector_element_shift_right_arithmetic )
     case 1:
         shift = b2 % 16;
         for (i=0; i < 8; i++)
-            regs->VR_H( v1, i ) = (S16) regs->VR_B( v3, i ) >> shift;
+            regs->VR_H( v1, i ) = (S16) regs->VR_H( v3, i ) >> shift;
         break;
     case 2:
         shift = b2 % 32;
@@ -756,13 +764,16 @@ DEF_INST( vector_store_multiple )
 
     VRS_A( inst, regs, v1, v3, b2, effective_addr2, m4 );
 
+    UNREFERENCED(m4);              // Alignment hint      
+
     ZVECTOR_CHECK( regs );
+
     PER_ZEROADDR_XCHECK( regs, b2 );
 
     if (v3 < v1 || (v3 - v1 + 1) > 16)
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
 
-    for (i = v1; i <= v3; i++)
+    for (i=v1; i <= v3; i++)
     {
         ARCH_DEP( vstore16 )( regs->VR_Q( i ), effective_addr2, b2, regs );
         effective_addr2 += 16;
@@ -783,12 +794,15 @@ DEF_INST( vector_store_with_length )
 
     VRS_B( inst, regs, v1, r3, b2, effective_addr2, m4 );
 
+    UNREFERENCED(m4);              // Not used
+
     ZVECTOR_CHECK( regs );
+
     PER_ZEROADDR_XCHECK( regs, b2 );
     
     len = min(regs->GR_L(r3), 15);
     
-    for (i = 0; i <= len; i++)
+    for (i=0; i <= len; i++)
         temp[i] = regs->VR_B(v1, i);
 
     ARCH_DEP( vstorec )( &temp, len , effective_addr2, b2, regs );
@@ -807,7 +821,7 @@ DEF_INST( vector_load_element_immediate_8 )
 
     ZVECTOR_CHECK( regs );
     
-    regs->VR_B(v1,m3) = i2 & 0xff;
+    regs->VR_B(v1,m3) = i2 & UCHAR_MAX;
     
     ZVECTOR_END( regs );
 }
@@ -869,10 +883,12 @@ DEF_INST( vector_generate_byte_mask )
 
     VRI_A( inst, regs, v1, i2, m3 );
 
+    UNREFERENCED(m3);              // Not used
+
     ZVECTOR_CHECK( regs );
 
     for (i=0; i < 16; i++)
-        regs->VR_B(v1, i) = (i2 & (0x1 << (15 - i))) ? 0xff : 0x00;
+        regs->VR_B(v1, i) = (i2 & (0x1 << (15 - i))) ? UCHAR_MAX : 0;
 
     ZVECTOR_END( regs );
 }
@@ -931,28 +947,28 @@ DEF_INST( vector_generate_mask )
     case 0:
         i2 &= 7;
         i3 &= 7;
-        bitmask = (i2 <= i3) ? (1 << (8 - i2)) - (1 << (7 - i3)) : 0xffu - (1u << (7 - i3)) + (1u << (8 - i2));
+        bitmask = (i2 <= i3) ? (1u << (8 - i2)) - (1u << (7 - i3)) : UCHAR_MAX - (1u << (7 - i3)) + (1u << (8 - i2));
         for (i=0; i < 16; i++)
             regs->VR_B(v1, i) = bitmask;
         break;
     case 1:
         i2 &= 15;
         i3 &= 15;
-        bitmask = (i2 <= i3) ? (1 << (16 - i2)) - (1 << (15 - i3)) : 0xffffu - (1u << (15 - i3)) + (1u << (16 - i2));
+        bitmask = (i2 <= i3) ? (1u << (16 - i2)) - (1u << (15 - i3)) : USHRT_MAX - (1u << (15 - i3)) + (1u << (16 - i2));
         for (i=0; i < 8; i++)
             regs->VR_H(v1, i) = bitmask;
         break;
     case 2:
         i2 &= 31;
         i3 &= 31;
-        bitmask = (i2 <= i3) ? (1 << (32 - i2)) - (1u << (31 - i3)) : 0xffffffffu - (1u << (31 - i3)) + (1u << (32 - i2));
+        bitmask = (i2 <= i3) ? (1u << (32 - i2)) - (1u << (31 - i3)) : UINT_MAX - (1u << (31 - i3)) + (1u << (32 - i2));
         for (i=0; i < 4; i++)
             regs->VR_F(v1, i) = bitmask;
         break;
     case 3:
         i2 &= 63;
         i3 &= 63;
-        bitmask = (i2 <= i3) ? (1ull << (64 - i2)) - (1ull << (63 - i3)) : 0xffffffffffffffffull - (1ull << (63 - i3)) + (1ull << (64 - i2));
+        bitmask = (i2 <= i3) ? (1ull << (64 - i2)) - (1ull << (63 - i3)) : ULLONG_MAX - (1ull << (63 - i3)) + (1ull << (64 - i2));
         for (i=0; i < 2; i++)
             regs->VR_D(v1, i) = bitmask;
         break;
@@ -969,16 +985,80 @@ DEF_INST( vector_generate_mask )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_fp_test_data_class_immediate )
 {
-    int     v1, v2, i3, m4, m5;
+//    int     v1, v2, i3, m4, m5;
+//, i, max, sel = 0;
+//    float32_t f32;
+//    float64_t f64;
+//    float128_t f128;
 
-    VRI_E( inst, regs, v1, v2, i3, m4, m5 );
+//    VRI_E( inst, regs, v1, v2, i3, m4, m5 );
 
+/*
     ZVECTOR_CHECK( regs );
+
+#define M5_RE ((m5 & 0x7) != 0) // Reserved
+#define M5_SE ((m5 & 0x8) != 0) // Single element
+
+    if (m4 < 2 || m4 > 4 || M5_RE)
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+
+    switch (m4)
+    {
+    case 2:
+        max = M5_SE ? 1 : 4;
+        for (i=0; i < max; i++)
+        {
+            ARCH_DEP( get_float32 )( &f32, &regs->VR_F(v2, i) );
+            if ((float32_class(f32) & i3) != 0) {
+                regs->VR_F(v1, i) = UINT_MAX;
+                sel++;
+            }
+            else regs->VR_F(v1, i) = 0;
+        }
+        break;
+    case 3:
+        max = M5_SE ? 1 : 2;
+        for (i=0; i < max; i++)
+        {
+            ARCH_DEP( get_float64 )( &f64, &regs->VR_D(v2, i) );
+            if ((float64_class(f64) & i3) != 0) {
+                regs->VR_D(v1, i) = ULLONG_MAX;
+                sel++;
+            }
+            else regs->VR_D(v1, i) = 0;
+        }
+        break;
+    case 4:
+        ARCH_DEP( get_float128 )( &f128, &regs->VR_D(v2, 0), &regs->VR_D(v2, 1) );
+            if ((float128_class(f128) & i3) != 0) {
+                regs->VR_D(v1, 0) = ULLONG_MAX;
+                regs->VR_D(v1, 1) = ULLONG_MAX;
+                sel++;
+            }
+            else {
+                regs->VR_D(v1, 0) = 0;
+                regs->VR_D(v1, 1) = 0;
+            }
+        break;
+    default:
+        break;
+    }
+    
+    if (sel == max)
+        regs->psw.cc = 0;
+    else if (sel > 0)
+        regs->psw.cc = 1;
+    else regs->psw.cc = 3;
+    }
+#undef M5_RE
+#undef M5_SE
+    */
     //
     // TODO: insert code here
     //
     if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
     //
+
     ZVECTOR_END( regs );
 }
 
@@ -1027,16 +1107,42 @@ DEF_INST( vector_replicate )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_population_count )
 {
-    int     v1, v2, m3, m4, m5;
+    int     v1, v2, m3, m4, m5, i;
 
     VRR_A( inst, regs, v1, v2, m3, m4, m5 );
 
+    UNREFERENCED(m4);                    // Not used
+    UNREFERENCED(m5);                    // Not used
+
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    switch (m3)
+    {
+    case 0:
+        for (i=0; i < 16; i++) {
+            regs->VR_B(v1, i) = population_count8( regs->VR_B(v2, i) );
+        }
+        break;
+    case 1:
+        for (i=0; i < 8; i++) {
+            regs->VR_H(v1, i) = population_count16( regs->VR_H(v2, i) );
+        }
+        break;
+    case 2:
+        for (i=0; i < 4; i++) {
+            regs->VR_F(v1, i) = population_count32( regs->VR_F(v2, i) );
+        }
+        break;
+    case 3:
+        for (i=0; i < 2; i++) {
+            regs->VR_D(v1, i) = population_count64( regs->VR_D(v2, i) );
+        }
+        break;
+    default:
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+        break;
+    }
+
     ZVECTOR_END( regs );
 }
 
@@ -1045,16 +1151,42 @@ DEF_INST( vector_population_count )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_count_trailing_zeros )
 {
-    int     v1, v2, m3, m4, m5;
+    int     v1, v2, m3, m4, m5, i;
 
     VRR_A( inst, regs, v1, v2, m3, m4, m5 );
 
+    UNREFERENCED(m4);                    // Not used
+    UNREFERENCED(m5);                    // Not used
+    
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    switch (m3)
+    {
+    case 0:
+        for (i=0; i < 16; i++) {
+            regs->VR_B(v1, i) = trailing_zeros8( regs->VR_B(v2, i) );
+        }
+        break;
+    case 1:
+        for (i=0; i < 8; i++) {
+            regs->VR_H(v1, i) = trailing_zeros16( regs->VR_H(v2, i) );
+        }
+        break;
+    case 2:
+        for (i=0; i < 4; i++) {
+            regs->VR_F(v1, i) = trailing_zeros32( regs->VR_F(v2, i) );
+        }
+        break;
+    case 3:
+        for (i=0; i < 2; i++) {
+            regs->VR_D(v1, i) = trailing_zeros64( regs->VR_D(v2, i) );
+        }
+        break;
+    default:
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+        break;
+    }
+
     ZVECTOR_END( regs );
 }
 
@@ -1063,16 +1195,42 @@ DEF_INST( vector_count_trailing_zeros )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_count_leading_zeros )
 {
-    int     v1, v2, m3, m4, m5;
+    int     v1, v2, m3, m4, m5, i;
 
     VRR_A( inst, regs, v1, v2, m3, m4, m5 );
 
+    UNREFERENCED(m4);                    // Not used
+    UNREFERENCED(m5);                    // Not used
+    
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    switch (m3)
+    {
+    case 0:
+        for (i=0; i < 16; i++) {
+            regs->VR_B(v1, i) = leading_zeros8( regs->VR_B(v2, i) );
+        }
+        break;
+    case 1:
+        for (i=0; i < 8; i++) {
+            regs->VR_H(v1, i) = leading_zeros16( regs->VR_H(v2, i) );
+        }
+        break;
+    case 2:
+        for (i=0; i < 4; i++) {
+            regs->VR_F(v1, i) = leading_zeros32( regs->VR_F(v2, i) );
+        }
+        break;
+    case 3:
+        for (i=0; i < 2; i++) {
+            regs->VR_D(v1, i) = leading_zeros64( regs->VR_D(v2, i) );
+        }
+        break;
+    default:
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+        break;
+    }
+
     ZVECTOR_END( regs );
 }
 
@@ -1085,6 +1243,10 @@ DEF_INST( vector_load_vector )
 
     VRR_A( inst, regs, v1, v2, m3, m4, m5 );
 
+    UNREFERENCED(m3);                    // Not used
+    UNREFERENCED(m4);                    // Not used
+    UNREFERENCED(m5);                    // Not used
+    
     ZVECTOR_CHECK( regs );
 
     regs->VR_Q( v1 ) = regs->VR_Q( v2 );
@@ -1097,16 +1259,57 @@ DEF_INST( vector_load_vector )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_isolate_string )
 {
-    int     v1, v2, m3, m4, m5;
+    int     v1, v2, m3, m4, m5, i, zero = 0;
 
     VRR_A( inst, regs, v1, v2, m3, m4, m5 );
+    
+    UNREFERENCED(m4);                    // Not used
 
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+#define M5_RE ((m5 & 0xc) != 0) // Reserved
+#define M5_CS ((m5 & 0x1) != 0) // Condition Code Set
+
+    if (m3 > 2 || M5_RE)
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+
+    switch (m3)
+    {
+    case 0:
+        for (i=0; i < 16; i++)
+        {
+            if (regs->VR_B(v2, i) == 0)
+                zero = 1;
+            regs->VR_B(v1, i) = zero ? 0 : regs->VR_B(v2, i);
+        }
+        break;
+    case 1:
+        for (i=0; i < 8; i++)
+        {
+            if (regs->VR_H(v2, i) == 0)
+                zero = 1;
+            regs->VR_H(v1, i) = zero ? 0 : regs->VR_H(v2, i);
+        }
+        break;
+    case 2:
+        for (i=0; i < 4; i++)
+        {
+            if (regs->VR_F(v2, i) == 0)
+                zero = 1;
+            regs->VR_F(v1, i) = zero ? 0 : regs->VR_F(v2, i);
+        }
+        break;
+    default:
+        break;
+    }
+
+    if (M5_CS)
+        regs->psw.cc = (zero == 0) ? 0 : 3;
+    
+
+#undef M5_RE
+#undef M5_CS
+    
     ZVECTOR_END( regs );
 }
 
@@ -1119,12 +1322,30 @@ DEF_INST( vector_sign_extend_to_doubleword )
 
     VRR_A( inst, regs, v1, v2, m3, m4, m5 );
 
+    UNREFERENCED(m4);                     // Not used
+    UNREFERENCED(m5);                     // Not used
+
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    switch (m3)
+    {
+    case 0:
+        regs->VR_D(v1, 0) = (S64)(S8) regs->VR_B(v2, 7);
+        regs->VR_D(v1, 1) = (S64)(S8) regs->VR_B(v2, 15);
+        break;
+    case 1:
+        regs->VR_D(v1, 0) = (S64)(S16) regs->VR_H(v2, 3);
+        regs->VR_D(v1, 1) = (S64)(S16) regs->VR_H(v2, 7);
+        break;
+    case 2:
+        regs->VR_D(v1, 0) = (S64)(S32) regs->VR_F(v2, 1);
+        regs->VR_D(v1, 1) = (S64)(S32) regs->VR_F(v2, 3);
+        break;
+    default:
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+        break;
+    }
+
     ZVECTOR_END( regs );
 }
 
@@ -1133,16 +1354,56 @@ DEF_INST( vector_sign_extend_to_doubleword )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_merge_low )
 {
-    int     v1, v2, v3, m4, m5, m6;
+    int     v1, v2, v3, m4, m5, m6, i;
+    U8      temp8[16];
+    U16     temp16[8];
+    U32     temp32[4];
+    U64     temp64[2];
+
+    UNREFERENCED(m5);                    // Not used
+    UNREFERENCED(m6);                    // Not used
 
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+    
+    switch (m4)
+    {
+    case 0:
+        for (i=0; i < 8; i++) {
+            temp8[i*2  ] = regs->VR_B(v2, i + 8);
+            temp8[i*2+1] = regs->VR_B(v3, i + 8);
+        }
+        for (i=0; i < 16; i++) 
+            regs->VR_B(v1, i) = temp8[i];
+        break;
+    case 1:
+        for (i=0; i < 4; i++) {
+            temp16[i*2  ] = regs->VR_H(v2, i + 4);
+            temp16[i*2+1] = regs->VR_H(v3, i + 4);
+        }
+        for (i=0; i < 8; i++) 
+            regs->VR_H(v1, i) = temp16[i];
+        break;
+    case 2:
+        for (i=0; i < 2; i++) {
+            temp32[i*2  ] = regs->VR_F(v2, i + 2);
+            temp32[i*2+1] = regs->VR_F(v3, i + 2);
+        }
+        for (i=0; i < 4; i++) 
+            regs->VR_F(v1, i) = temp32[i];
+        break;
+    case 3:
+        temp64[0] = regs->VR_D(v2, 1);
+        temp64[1] = regs->VR_D(v3, 1);
+        regs->VR_D(v1, 0) = temp64[0];
+        regs->VR_D(v1, 1) = temp64[1];
+        break;
+    default:
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+        break;
+    }
+
     ZVECTOR_END( regs );
 }
 
@@ -1151,16 +1412,56 @@ DEF_INST( vector_merge_low )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_merge_high )
 {
-    int     v1, v2, v3, m4, m5, m6;
+    int     v1, v2, v3, m4, m5, m6, i;
+    U8      temp8[16];
+    U16     temp16[8];
+    U32     temp32[4];
+    U64     temp64[2];
+
+    UNREFERENCED(m5);                    // Not used
+    UNREFERENCED(m6);                    // Not used
 
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    switch (m4)
+    {
+    case 0:
+        for (i=0; i < 8; i++) {
+            temp8[i*2  ] = regs->VR_B(v2, i);
+            temp8[i*2+1] = regs->VR_B(v3, i);
+        }
+        for (i=0; i < 16; i++) 
+            regs->VR_B(v1, i) = temp8[i];
+        break;
+    case 1:
+        for (i=0; i < 4; i++) {
+            temp16[i*2  ] = regs->VR_H(v2, i);
+            temp16[i*2+1] = regs->VR_H(v3, i);
+        }
+        for (i=0; i < 8; i++) 
+            regs->VR_H(v1, i) = temp16[i];
+        break;
+    case 2:
+        for (i=0; i < 2; i++) {
+            temp32[i*2  ] = regs->VR_F(v2, i);
+            temp32[i*2+1] = regs->VR_F(v3, i);
+        }
+        for (i=0; i < 4; i++) 
+            regs->VR_F(v1, i) = temp32[i];
+        break;
+    case 3:
+        temp64[0] = regs->VR_D(v2, 0);
+        temp64[1] = regs->VR_D(v3, 0);
+        regs->VR_D(v1, 0) = temp64[0];
+        regs->VR_D(v1, 1) = temp64[1];
+        break;
+    default:
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+        break;
+    }
+
     ZVECTOR_END( regs );
 }
 
@@ -1186,16 +1487,30 @@ DEF_INST( vector_load_vr_from_grs_disjoint )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_sum_across_word )
 {
-    int     v1, v2, v3, m4, m5, m6;
+    int     v1, v2, v3, m4, m5, m6, i;
 
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
+    UNREFERENCED(m5);                    // Not used
+    UNREFERENCED(m6);                    // Not used
+
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+    
+    switch (m4)
+    {
+    case 0:
+        for (i=0; i < 4; i++)
+            regs->VR_F(v1, i) = (U32) regs->VR_B(v2, i*4) + regs->VR_B(v2, i*4+1) + regs->VR_B(v2, i*4+2) + regs->VR_B(v2, i*4+ 3) + regs->VR_B(v3, i*4+3);
+        break;
+    case 1:
+        for (i=0; i < 4; i++)
+            regs->VR_F(v1, i) = (U32) regs->VR_H(v2, i*2) + regs->VR_H(v2, i*2+1) + regs->VR_H(v3, i*2+1);
+        break;
+    default:
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+        break;
+    }
+    
     ZVECTOR_END( regs );
 }
 
@@ -1205,15 +1520,37 @@ DEF_INST( vector_sum_across_word )
 DEF_INST( vector_sum_across_doubleword )
 {
     int     v1, v2, v3, m4, m5, m6;
-
+    U64     high, low, add;
+    
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
+    UNREFERENCED(m5);                    // Not used
+    UNREFERENCED(m6);                    // Not used
+
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    switch (m4)
+    {
+    case 2:
+        regs->VR_D(v1, 0) = 0;
+        regs->VR_D(v1, 1) = regs->VR_F(v2, 0) + regs->VR_F(v2, 1) + regs->VR_F(v2, 2) + regs->VR_F(v2, 3) + regs->VR_F(v3, 3);
+        break;
+    case 3:
+        high = 0;
+        low = regs->VR_D(v2, 0);
+        add = low + regs->VR_D(v2, 1);
+        if (add < low) high++;
+        low = add;
+        add = low + regs->VR_D(v3, 1);
+        if (add < low) high++;
+        regs->VR_D(v1, 0) = high;
+        regs->VR_D(v1, 1) = add;
+        break;
+    default:
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+        break;
+    }
+
     ZVECTOR_END( regs );
 }
 
@@ -1222,16 +1559,27 @@ DEF_INST( vector_sum_across_doubleword )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_checksum )
 {
-    int     v1, v2, v3, m4, m5, m6;
+    int     v1, v2, v3, m4, m5, m6, i;
+    U32     sum;
+
+    UNREFERENCED(m4);                    // Not used
+    UNREFERENCED(m5);                    // Not used
+    UNREFERENCED(m6);                    // Not used
 
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+    
+    sum = regs->VR_F(v3, 1);
+    for (i=0; i < 4; i++) {
+        sum += regs->VR_F(v2, i);
+        if (sum < regs->VR_F(v2, i)) sum++;
+    }
+    regs->VR_F(v1, 0) = 0;
+    regs->VR_F(v1, 1) = sum;
+    regs->VR_F(v1, 2) = 0;
+    regs->VR_F(v1, 3) = 0;
+        
     ZVECTOR_END( regs );
 }
 
@@ -1243,6 +1591,9 @@ DEF_INST( vector_sum_across_quadword )
     int     v1, v2, v3, m4, m5, m6;
     U64     high, low, add;
 
+    UNREFERENCED(m5);                    // Not used
+    UNREFERENCED(m6);                    // Not used
+
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
     ZVECTOR_CHECK( regs );
@@ -1250,12 +1601,12 @@ DEF_INST( vector_sum_across_quadword )
     switch (m4)
     {
     case 2:
-        regs->VR_D(v1, 0) = 0x00;
+        regs->VR_D(v1, 0) = 0;
         regs->VR_D(v1, 1) = regs->VR_F(v2, 0) + regs->VR_F(v2, 1) + regs->VR_F(v2, 2) + regs->VR_F(v2, 3)
             + regs->VR_F(v3, 3);
         break;
     case 3:
-        high = 0x00;
+        high = 0;
         low = regs->VR_D(v2, 0);
         add = low + regs->VR_D(v2, 1);
         if (add < low) high++;
@@ -1282,6 +1633,10 @@ DEF_INST( vector_and )
 
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
+    UNREFERENCED(m4);                    // Not used
+    UNREFERENCED(m5);                    // Not used
+    UNREFERENCED(m6);                    // Not used
+
     ZVECTOR_CHECK( regs );
 
     regs->VR_D(v1, 0) = regs->VR_D(v2, 0) & regs->VR_D(v3, 0);
@@ -1299,12 +1654,15 @@ DEF_INST( vector_and_with_complement )
 
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
+    UNREFERENCED(m4);                    // Not used
+    UNREFERENCED(m5);                    // Not used
+    UNREFERENCED(m6);                    // Not used
+
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    regs->VR_D(v1, 0) = regs->VR_D(v2, 0) & ~regs->VR_D(v3, 0);
+    regs->VR_D(v1, 1) = regs->VR_D(v2, 1) & ~regs->VR_D(v3, 1);
+
     ZVECTOR_END( regs );
 }
 
@@ -1317,12 +1675,15 @@ DEF_INST( vector_or )
 
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
+    UNREFERENCED(m4);                    // Not used
+    UNREFERENCED(m5);                    // Not used
+    UNREFERENCED(m6);                    // Not used
+
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    regs->VR_D(v1, 0) = regs->VR_D(v2, 0) | regs->VR_D(v3, 0);
+    regs->VR_D(v1, 1) = regs->VR_D(v2, 1) | regs->VR_D(v3, 1);
+
     ZVECTOR_END( regs );
 }
 
@@ -1335,12 +1696,15 @@ DEF_INST( vector_nor )
 
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
+    UNREFERENCED(m4);                    // Not used
+    UNREFERENCED(m5);                    // Not used
+    UNREFERENCED(m6);                    // Not used
+
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    regs->VR_D(v1, 0) = (regs->VR_D(v2, 0) ^ ULLONG_MAX) & (regs->VR_D(v3, 0) ^ ULLONG_MAX);
+    regs->VR_D(v1, 1) = (regs->VR_D(v2, 1) ^ ULLONG_MAX) & (regs->VR_D(v3, 1) ^ ULLONG_MAX);
+
     ZVECTOR_END( regs );
 }
 
@@ -1352,6 +1716,10 @@ DEF_INST( vector_exclusive_or )
     int     v1, v2, v3, m4, m5, m6;
 
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
+
+    UNREFERENCED(m4);                    // Not used
+    UNREFERENCED(m5);                    // Not used
+    UNREFERENCED(m6);                    // Not used
 
     ZVECTOR_CHECK( regs );
 
@@ -1369,6 +1737,9 @@ DEF_INST( vector_element_shift_left_vector )
     int     v1, v2, v3, m4, m5, m6, i;
 
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
+
+    UNREFERENCED(m5);                    // Not used
+    UNREFERENCED(m6);                    // Not used
 
     ZVECTOR_CHECK( regs );
 
@@ -1403,16 +1774,60 @@ DEF_INST( vector_element_shift_left_vector )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_element_rotate_and_insert_under_mask )
 {
-    int     v1, v2, v3, i4, m5;
+    int     v1, v2, v3, i4, m5, i, rotl, rotr;
+    U64     a, b, c;
 
     VRI_D( inst, regs, v1, v2, v3, i4, m5 );
 
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+    
+    switch (m5)
+    {
+    case 0:
+        rotl = i4 % 8;
+        rotr = -rotl & 7;
+        for (i=0; i < 16; i++) {
+            a = regs->VR_B(v1, i);
+            b = regs->VR_B(v2, i) << rotl | regs->VR_B(v2, i) >> rotr;
+            c = regs->VR_B(v3, i);
+            regs->VR_B(v1, i) = (a & ~c) | (b & c);
+        }
+        break;
+    case 1:
+        rotl = i4 % 16;
+        rotr = -rotl & 15;
+        for (i=0; i < 8; i++) {
+            a = regs->VR_H(v1, i);
+            b = regs->VR_H(v2, i) << rotl | regs->VR_H(v2, i) >> rotr;
+            c = regs->VR_H(v3, i);
+            regs->VR_H(v1, i) = (a & ~c) | (b & c);
+        }
+        break;
+    case 2:
+        rotl = i4 % 32;
+        rotr = -rotl & 31;
+        for (i=0; i < 4; i++) {
+            a = regs->VR_F(v1, i);
+            b = regs->VR_F(v2, i) << rotl | regs->VR_F(v2, i) >> rotr;
+            c = regs->VR_F(v3, i);
+            regs->VR_F(v1, i) = (a & ~c) | (b & c);
+        }
+        break;
+    case 3:
+        rotl = i4 % 64;
+        rotr = -rotl & 63;
+        for (i=0; i < 2; i++) {
+            a = regs->VR_D(v1, i);
+            b = regs->VR_D(v2, i) << rotl | regs->VR_D(v2, i) >> rotr;
+            c = regs->VR_D(v3, i);
+            regs->VR_D(v1, i) = (a & ~c) | (b & c);
+        }
+        break;
+    default:
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+        break;
+    }
+
     ZVECTOR_END( regs );
 }
 
@@ -1421,16 +1836,50 @@ DEF_INST( vector_element_rotate_and_insert_under_mask )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_element_rotate_left_logical_vector )
 {
-    int     v1, v2, v3, m4, m5, m6;
+    int     v1, v2, v3, m4, m5, m6, i, rotl, rotr;
 
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
+    UNREFERENCED(m5);           // Not used
+    UNREFERENCED(m6);           // Not used
+
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+    
+    switch (m4)
+    {
+    case 0:
+        for (i=0; i < 16; i++) {
+            rotl = regs->VR_B(v3, i) % 8;
+            rotr = -rotl & 7;
+            regs->VR_B(v1, i) = (regs->VR_B(v2, i) << rotl) | (regs->VR_B(v2, i) >> rotr);
+        }
+        break;
+    case 1:
+        for (i=0; i < 8; i++) {
+            rotl = regs->VR_H(v3, i) % 16;
+            rotr = -rotl & 15;
+            regs->VR_H(v1, i) = (regs->VR_H(v2, i) << rotl) | (regs->VR_H(v2, i) >> rotr);
+        }
+        break;
+    case 2:
+        for (i=0; i < 4; i++) {
+            rotl = regs->VR_F(v3, i) % 32;
+            rotr = -rotl & 31;
+            regs->VR_F(v1, i) = (regs->VR_F(v2, i) << rotl) | (regs->VR_F(v2, i) >> rotr);
+        }
+        break;
+    case 3:
+        for (i=0; i < 2; i++) {
+            rotl = regs->VR_D(v3, i) % 64;
+            rotr = -rotl & 63;
+            regs->VR_D(v1, i) = (regs->VR_D(v2, i) << rotl) | (regs->VR_D(v2, i) >> rotr);
+        }
+        break;
+    default:
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+        break;
+    }
+
     ZVECTOR_END( regs );
 }
 
@@ -1439,16 +1888,21 @@ DEF_INST( vector_element_rotate_left_logical_vector )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_shift_left )
 {
-    int     v1, v2, v3, m4, m5, m6;
+    int     v1, v2, v3, m4, m5, m6, i, shift;
 
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
+    UNREFERENCED(m4);                 // Not used
+    UNREFERENCED(m5);                 // Not used
+    UNREFERENCED(m6);                 // Not used
+
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    for (i=0; i < 16; i++) {
+        shift = regs->VR_B(v3, i) & 0x7;
+        regs->VR_B(v1, i) = regs->VR_B(v2, i) << shift | (i == 15 ? 0x00 : regs->VR_B(v2, i + 1)) >> (8 - shift);
+    }
+
     ZVECTOR_END( regs );
 }
 
@@ -1457,16 +1911,21 @@ DEF_INST( vector_shift_left )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_shift_left_by_byte )
 {
-    int     v1, v2, v3, m4, m5, m6;
+    int     v1, v2, v3, m4, m5, m6, shift, i;
 
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
+    UNREFERENCED(m4);                 // Not used
+    UNREFERENCED(m5);                 // Not used
+    UNREFERENCED(m6);                 // Not used
+
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    shift = (regs->VR_B(v3, 7) & 0x78) >> 3;
+    for (i=0; i < 16; i++) {
+        regs->VR_B(v1, i) = (i+shift) < 16 ? regs->VR_B(v2, i + shift) : 0x00;
+    }
+
     ZVECTOR_END( regs );
 }
 
@@ -1475,16 +1934,19 @@ DEF_INST( vector_shift_left_by_byte )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_shift_left_double_by_byte )
 {
-    int     v1, v2, v3, i4, m5;
+    int     v1, v2, v3, i4, m5, shift, i;
 
     VRI_D( inst, regs, v1, v2, v3, i4, m5 );
 
+    UNREFERENCED(m5);                 // Not used
+
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    shift = i4 & 0xf;
+    for (i=0; i < 16; i++) {
+        regs->VR_B(v1, i) = (i+shift) < 16 ? regs->VR_B(v2, i + shift) : regs->VR_B(v3, i+shift-16);
+    }
+
     ZVECTOR_END( regs );
 }
 
@@ -1493,16 +1955,46 @@ DEF_INST( vector_shift_left_double_by_byte )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_element_shift_right_logical_vector )
 {
-    int     v1, v2, v3, m4, m5, m6;
+    int     v1, v2, v3, m4, m5, m6, shift, i;
 
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
+    UNREFERENCED(m5);                 // Not used
+    UNREFERENCED(m6);                 // Not used
+
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+    
+    switch (m4)
+    {
+    case 0:
+        for (i=0; i < 16; i++) {
+            shift = regs->VR_B(v3, i) % 8;
+            regs->VR_B(v1, i) = regs->VR_B(v2, i) >> shift;
+        }
+        break;
+    case 1:
+        for (i=0; i < 8; i++) {
+            shift = regs->VR_H(v3, i) % 16;
+            regs->VR_H(v1, i) = regs->VR_H(v2, i) >> shift;
+        }
+        break;
+    case 2:
+        for (i=0; i < 4; i++) {
+            shift = regs->VR_F(v3, i) % 32;
+            regs->VR_F(v1, i) = regs->VR_F(v2, i) >> shift;
+        }
+        break;
+    case 3:
+        for (i=0; i < 2; i++) {
+            shift = regs->VR_D(v3, i) % 64;
+            regs->VR_D(v1, i) = regs->VR_D(v2, i) >> shift;
+        }
+        break;
+    default:
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+        break;
+    }
+
     ZVECTOR_END( regs );
 }
 
@@ -1511,16 +2003,46 @@ DEF_INST( vector_element_shift_right_logical_vector )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_element_shift_right_arithmetic_vector )
 {
-    int     v1, v2, v3, m4, m5, m6;
+    int     v1, v2, v3, m4, m5, m6, shift, i;
 
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
+    UNREFERENCED(m5);                 // Not used
+    UNREFERENCED(m6);                 // Not used
+
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    switch (m4)
+    {
+    case 0:
+        for (i=0; i < 16; i++) {
+            shift = regs->VR_B(v3, i) % 8;
+            regs->VR_B(v1, i) = (S8)regs->VR_B(v2, i) >> shift;
+        }
+        break;
+    case 1:
+        for (i=0; i < 8; i++) {
+            shift = regs->VR_H(v3, i) % 16;
+            regs->VR_H(v1, i) = (S16)regs->VR_H(v2, i) >> shift;
+        }
+        break;
+    case 2:
+        for (i=0; i < 4; i++) {
+            shift = regs->VR_F(v3, i) % 32;
+            regs->VR_F(v1, i) = (S32)regs->VR_F(v2, i) >> shift;
+        }
+        break;
+    case 3:
+        for (i=0; i < 2; i++) {
+            shift = regs->VR_D(v3, i) % 64;
+            regs->VR_D(v1, i) = (S64)regs->VR_D(v2, i) >> shift;
+        }
+        break;
+    default:
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+        break;
+    }
+
     ZVECTOR_END( regs );
 }
 
@@ -1529,16 +2051,21 @@ DEF_INST( vector_element_shift_right_arithmetic_vector )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_shift_right_logical )
 {
-    int     v1, v2, v3, m4, m5, m6;
+    int     v1, v2, v3, m4, m5, m6, shift, i;
 
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
+    UNREFERENCED(m4);                 // Not used
+    UNREFERENCED(m5);                 // Not used
+    UNREFERENCED(m6);                 // Not used
+
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    for (i=0; i < 16; i++) {
+        shift = regs->VR_B(v3, i) & 0x7;
+        regs->VR_B(v1, i) = regs->VR_B(v2, i) >> shift | (i == 0 ? 0x00 : regs->VR_B(v2, i - 1)) << (8 - shift);
+    }
+
     ZVECTOR_END( regs );
 }
 
@@ -1551,12 +2078,16 @@ DEF_INST( vector_shift_right_logical_by_byte )
 
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
+    UNREFERENCED(m4);                 // Not used
+    UNREFERENCED(m5);                 // Not used
+    UNREFERENCED(m6);                 // Not used
+
     ZVECTOR_CHECK( regs );
 
     shift = (regs->VR_B(v3, 7) >> 3) & 0x0f;
     
-    regs->VR_D(v1, 0) = 0x00;
-    regs->VR_D(v1, 1) = 0x00;
+    regs->VR_D(v1, 0) = 0;
+    regs->VR_D(v1, 1) = 0;
     
     for (i=shift; i < 16; i++)
         regs->VR_B(v1, i) = regs->VR_B(v2, i - shift);
@@ -1569,16 +2100,21 @@ DEF_INST( vector_shift_right_logical_by_byte )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_shift_right_arithmetic )
 {
-    int     v1, v2, v3, m4, m5, m6;
+    int     v1, v2, v3, m4, m5, m6, shift, i;
 
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
+    UNREFERENCED(m4);                 // Not used
+    UNREFERENCED(m5);                 // Not used
+    UNREFERENCED(m6);                 // Not used
+
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    for (i=0; i < 16; i++) {
+        shift = regs->VR_B(v3, i) & 0x7;
+        regs->VR_B(v1, i) = (S8) regs->VR_B(v2, i) >> shift | (i == 0 ? 0x00 : (S8) regs->VR_B(v2, i - 1)) << (8 - shift);
+    }
+
     ZVECTOR_END( regs );
 }
 
@@ -1587,25 +2123,34 @@ DEF_INST( vector_shift_right_arithmetic )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_shift_right_arithmetic_by_byte )
 {
-    int     v1, v2, v3, m4, m5, m6;
+    int     v1, v2, v3, m4, m5, m6, i, shift;
+    U8      pad;
 
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
+    UNREFERENCED(m4);                 // Not used
+    UNREFERENCED(m5);                 // Not used
+    UNREFERENCED(m6);                 // Not used
+
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    shift = (regs->VR_B(v3, 7) >> 3) & 0x0f;
+    
+    pad = (regs->VR_B(v2, 0) & 0x80) ? 0xff : 0x00;
+    
+    for (i=0; i < 16; i++)
+        regs->VR_B(v1, i) = (i-shift) >= 0 ? regs->VR_B(v2, i-shift) : pad;
+
     ZVECTOR_END( regs );
 }
+
 
 /*-------------------------------------------------------------------*/
 /* E780 VFEE   - Vector Find Element Equal                   [VRR-b] */
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_find_element_equal )
 {
-    int     v1, v2, v3, m4, m5, ind1, ind2, max, i;
+    int     v1, v2, v3, m4, m5, ind1 = 0, ind2 = 0, max = 0, i;
 
     VRR_B( inst, regs, v1, v2, v3, m4, m5 );
 
@@ -1626,7 +2171,7 @@ DEF_INST( vector_find_element_equal )
         {
             if ((ind1 == max) && regs->VR_B(v2,i) == regs->VR_B(v3,i))
                 ind1 = i;
-            if ((ind2 == max) && M5_ZS && regs->VR_B(v2,i) == 0x00) // if M5-ZS (Zero Search)
+            if ((ind2 == max) && M5_ZS && regs->VR_B(v2,i) == 0) // if M5-ZS (Zero Search)
                 ind2 = i;
         }
         break;
@@ -1636,7 +2181,7 @@ DEF_INST( vector_find_element_equal )
         {
             if ((ind1 == max) && regs->VR_H(v2,i) == regs->VR_H(v3,i))
                 ind1 = i;
-            if ((ind2 == max) && M5_ZS && regs->VR_H(v2, i) == 0x0000) // if M5-ZS (Zero Search)
+            if ((ind2 == max) && M5_ZS && regs->VR_H(v2, i) == 0) // if M5-ZS (Zero Search)
                 ind2 = i;
         }
         break;
@@ -1646,16 +2191,16 @@ DEF_INST( vector_find_element_equal )
         {
             if ((ind1 == max) && regs->VR_F(v2,i) == regs->VR_F(v3,i))
                 ind1 = i;
-            if ((ind2 == max) && M5_ZS && regs->VR_F(v2,i) == 0x00000000) // if M5-ZS (Zero Search)
+            if ((ind2 == max) && M5_ZS && regs->VR_F(v2,i) == 0) // if M5-ZS (Zero Search)
                 ind2 = i;
         }
         break;
     default:
         break;
     }
-    regs->VR_D(v1, 0) = 0x00;
+    regs->VR_D(v1, 0) = 0;
     regs->VR_B(v1, 7) = min(ind1, ind2) * (1 << m4); 
-    regs->VR_D(v1, 1) = 0x00;
+    regs->VR_D(v1, 1) = 0;
 
     if (M5_CS)               // if M5_CS (Condition Code Set)
     {
@@ -1681,7 +2226,7 @@ DEF_INST( vector_find_element_equal )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_find_element_not_equal )
 {
-    int     v1, v2, v3, m4, m5, i, ind1, ind2, max, match = 0;
+    int     v1, v2, v3, m4, m5, i, ind1 = 0, ind2 = 0, max = 0, match = 0;
 
     VRR_B( inst, regs, v1, v2, v3, m4, m5 );
 
@@ -1705,7 +2250,7 @@ DEF_INST( vector_find_element_not_equal )
                 match = (regs->VR_B(v2,i) < regs->VR_B(v3,i)) ? 1:2;
                 ind1 = i;
             }
-            if ((ind2 == max) && M5_ZS && regs->VR_B(v2, i) == 0x00) // if M5-ZS (Zero Search)
+            if ((ind2 == max) && M5_ZS && regs->VR_B(v2, i) == 0) // if M5-ZS (Zero Search)
                 ind2 = i;
         }
         break;
@@ -1718,7 +2263,7 @@ DEF_INST( vector_find_element_not_equal )
                 match = (regs->VR_H(v2, i) < regs->VR_H(v3, i)) ? 1 : 2;
                 ind1 = i;
             }
-            if ((ind2 == max) && M5_ZS && regs->VR_H(v2, i) == 0x0000) // if M5-ZS (Zero Search)
+            if ((ind2 == max) && M5_ZS && regs->VR_H(v2, i) == 0) // if M5-ZS (Zero Search)
                 ind2 = i;
         }
         break;
@@ -1731,16 +2276,16 @@ DEF_INST( vector_find_element_not_equal )
                 match = (regs->VR_F(v2, i) < regs->VR_F(v3, i)) ? 1 : 2;
                 ind1 = i;
             }
-            if ((ind2 == max) && M5_ZS && regs->VR_F(v2, i) == 0x00000000) // if M5-ZS (Zero Search)
+            if ((ind2 == max) && M5_ZS && regs->VR_F(v2, i) == 0) // if M5-ZS (Zero Search)
                 ind2 = i;
         }
         break;
     default:
         break;
     }
-    regs->VR_D(v1, 0) = 0x00;
+    regs->VR_D(v1, 0) = 0;
     regs->VR_B(v1, 7) = min(ind1, ind2) * (1 << m4);
-    regs->VR_D(v1, 1) = 0x00;
+    regs->VR_D(v1, 1) = 0;
 
     if (M5_CS)               // if M5_CS (Condition Code Set)
     {
@@ -1781,7 +2326,7 @@ salva - 2023, feb,27.
 
 DEF_INST( vector_find_any_element_equal )
 {
-    int     v1, v2, v3, m4, m5, int1, ind1, ind2, max, i, j, s;
+    int     v1, v2, v3, m4, m5, int1, ind1 = 0, ind2 = 0, max = 0, i, j, s;
 
     VRR_B( inst, regs, v1, v2, v3, m4, m5 );
 
@@ -1801,7 +2346,7 @@ DEF_INST( vector_find_any_element_equal )
             for (j=0; j < max; j++)
                 if (regs->VR_B(v2, i) == regs->VR_B(v3, j))
                     int1 |= (1 << i);
-            if (M5_ZS && (regs->VR_B(v2, i) == 0x00)) // if M5-ZS (Zero Search)
+            if (M5_ZS && (regs->VR_B(v2, i) == 0)) // if M5-ZS (Zero Search)
                 ind2 = min(ind2, i);
         }
         if (M5_IN)
@@ -1812,7 +2357,7 @@ DEF_INST( vector_find_any_element_equal )
             if (s)
                 ind1 = min(ind1, i);
             if (M5_RT)
-                regs->VR_B(v1, i) = s ? 0xff: 0x00;
+                regs->VR_B(v1, i) = s ? UCHAR_MAX : 0;
         }
         break;
     case 1:
@@ -1822,7 +2367,7 @@ DEF_INST( vector_find_any_element_equal )
             for (j=0; j < max; j++)
                 if (regs->VR_H(v2, i) == regs->VR_H(v3, j))
                     int1 |= (1 << i);
-            if (M5_ZS && (regs->VR_H(v2, i) == 0x0000)) // if M5-ZS (Zero Search)
+            if (M5_ZS && (regs->VR_H(v2, i) == 0)) // if M5-ZS (Zero Search)
                 ind2 = min(ind2, i);
         }
         if (M5_IN)
@@ -1833,7 +2378,7 @@ DEF_INST( vector_find_any_element_equal )
             if (s)
                 ind1 = min(ind1, i);
             if (M5_RT)
-                regs->VR_H(v1, i) = s ? 0xffff : 0x0000;
+                regs->VR_H(v1, i) = s ? USHRT_MAX : 0;
         }
         break;
     case 2:
@@ -1843,7 +2388,7 @@ DEF_INST( vector_find_any_element_equal )
             for (j=0; j < max; j++)
                 if (regs->VR_F(v2, i) == regs->VR_F(v3, j))
                     int1 |= (1 << i);
-            if (M5_ZS && (regs->VR_F(v2, i) == 0x00)) // if M5-ZS (Zero Search)
+            if (M5_ZS && (regs->VR_F(v2, i) == 0)) // if M5-ZS (Zero Search)
                 ind2 = min(ind2, i);
         }
         if (M5_IN)
@@ -1854,7 +2399,7 @@ DEF_INST( vector_find_any_element_equal )
             if (s)
                 ind1 = min(ind1, i);
             if (M5_RT)
-                regs->VR_F(v1, i) = s ? 0xffffffff : 0x00000000;
+                regs->VR_F(v1, i) = s ? UINT_MAX : 0;
         }
         break;
     default:
@@ -1863,9 +2408,9 @@ DEF_INST( vector_find_any_element_equal )
     }
     if (!M5_RT)               // if !M5_RT (No result Type)
     {
-        regs->VR_D(v1, 0) = 0x00;
+        regs->VR_D(v1, 0) = 0;
         regs->VR_B(v1, 7) = min(ind1, ind2) * (1 << m4);
-        regs->VR_D(v1, 1) = 0x00;
+        regs->VR_D(v1, 1) = 0;
     }
 
     if (M5_CS)               // if M5_CS (Condition Code Set)
@@ -1894,15 +2439,22 @@ DEF_INST( vector_find_any_element_equal )
 DEF_INST( vector_permute_doubleword_immediate )
 {
     int     v1, v2, v3, m4, m5, m6;
+    U64     d1, d2;
 
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
+    UNREFERENCED(m5);                     // Not used
+    UNREFERENCED(m6);                     // Not used
+    
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+    
+    d1 = regs->VR_D(v2, (m4 >> 2 & 0x01));
+    d2 = regs->VR_D(v3, (m4 & 0x01));
+
+    regs->VR_D(v1, 0) = d1;
+    regs->VR_D(v1, 1) = d2;
+
+
     ZVECTOR_END( regs );
 }
 
@@ -1911,7 +2463,7 @@ DEF_INST( vector_permute_doubleword_immediate )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_string_range_compare )
 {
-    int     v1, v2, v3, v4, m5, m6, max, low1, low2, result1[16], result2[16], i, j, lr, rr;
+    int     v1, v2, v3, v4, m5, m6, max = 0, low1 = 0, low2 = 0, result1[16], result2[16], i, j, lr, rr;
 
     VRR_D( inst, regs, v1, v2, v3, v4, m5, m6 );
 
@@ -1922,8 +2474,8 @@ DEF_INST( vector_string_range_compare )
 #define M6_ZS ((m6 & 0x2) != 0) // Zero Search
 #define M6_CS ((m6 & 0x1) != 0) // Condition Code Set
 
-    regs->VR_D(v1, 0) = 0x00;
-    regs->VR_D(v1, 1) = 0x00;
+    regs->VR_D(v1, 0) = 0;
+    regs->VR_D(v1, 1) = 0;
     
     switch (m5)
     {
@@ -1931,7 +2483,7 @@ DEF_INST( vector_string_range_compare )
         max = 16, low1 = max, low2 = max;
         for (i=0; i < max; i++) {
             result1[i] = 0;
-            result2[i] = M6_ZS & (regs->VR_B(v2, i) == 0x00);
+            result2[i] = M6_ZS & (regs->VR_B(v2, i) == 0);
             for (j=0; j < max; j+=2) {
                 lr = 0, rr = 0;
                 if ((regs->VR_B(v4, j)   & 0x80) && regs->VR_B(v2, i) == regs->VR_B(v3, j))   lr = 1;
@@ -1943,7 +2495,7 @@ DEF_INST( vector_string_range_compare )
                 result1[i] = (lr & rr) ^ M6_IN;
             }
             if (M6_RT) {
-                regs->VR_B(v1, i) = result1[i] ? 0xff : 0x00;
+                regs->VR_B(v1, i) = result1[i] ? UCHAR_MAX : 0;
             }
             if (result1[i]) low1 = min(low1, i);
             if (result2[i]) low2 = min(low2, i);
@@ -1953,7 +2505,7 @@ DEF_INST( vector_string_range_compare )
         max = 8, low1 = max, low2 = max;
         for (i=0; i < max; i++) {
             result1[i] = 0;
-            result2[i] = M6_ZS & (regs->VR_H(v2, i) == 0x00);
+            result2[i] = M6_ZS & (regs->VR_H(v2, i) == 0);
             for (j=0; j < max; j+=2) {
                 lr = 0, rr = 0;
                 if ((regs->VR_H(v4, j)   & 0x8000) && regs->VR_H(v2, i) == regs->VR_H(v3, j))   lr = 1;
@@ -1965,7 +2517,7 @@ DEF_INST( vector_string_range_compare )
                 result1[i] = (lr & rr) ^ M6_IN;
             }
             if (M6_RT) {
-                regs->VR_H(v1, i) = result1[i] ? 0xffff : 0x0000;
+                regs->VR_H(v1, i) = result1[i] ? USHRT_MAX : 0;
             }
             if (result1[i]) low1 = min(low1, i);
             if (result2[i]) low2 = min(low2, i);
@@ -1975,7 +2527,7 @@ DEF_INST( vector_string_range_compare )
         max = 4, low1 = max, low2 = max;
         for (i=0; i < max; i++) {
             result1[i] = 0;
-            result2[i] = M6_ZS & (regs->VR_F(v2, i) == 0x00);
+            result2[i] = M6_ZS & (regs->VR_F(v2, i) == 0);
             for (j=0; j < max; j+=2) {
                 lr = 0, rr = 0;
                 if ((regs->VR_F(v4, j)   & 0x8000) && regs->VR_F(v2, i) == regs->VR_F(v3, j))   lr = 1;
@@ -1987,7 +2539,7 @@ DEF_INST( vector_string_range_compare )
                 result1[i] = (lr & rr) ^ M6_IN;
             }
             if (M6_RT) {
-                regs->VR_F(v1, i) = result1[i] ? 0xffffffff : 0x00000000;
+                regs->VR_F(v1, i) = result1[i] ? UINT_MAX : 0;
             }
             if (result1[i]) low1 = min(low1, i);
             if (result2[i]) low2 = min(low2, i);
@@ -1997,6 +2549,7 @@ DEF_INST( vector_string_range_compare )
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
         break;
     }
+
     if (!M6_RT) regs->VR_B(v1, 7) = min(low1, low2) * (1 << m5);;
     if (M6_CS) {               // if M6_CS (Condition Code Set)
         if (M6_ZS && (low1 >= low2))
@@ -2027,6 +2580,9 @@ DEF_INST( vector_permute )
 
     VRR_E( inst, regs, v1, v2, v3, v4, m5, m6 );
 
+    UNREFERENCED(m5);                 // Not used
+    UNREFERENCED(m6);                 // Not used
+
     ZVECTOR_CHECK( regs );
 
     for (i=0; i < 16; i++) {
@@ -2050,6 +2606,9 @@ DEF_INST( vector_select )
 
     VRR_E( inst, regs, v1, v2, v3, v4, m5, m6 );
 
+    UNREFERENCED(m5);                 // Not used
+    UNREFERENCED(m6);                 // Not used
+
     ZVECTOR_CHECK( regs );
 
     regs->VR_D(v1, 1) = (regs->VR_D(v4, 1) & regs->VR_D(v2, 1)) | (~regs->VR_D(v4, 1) & regs->VR_D(v3, 1));
@@ -2063,6 +2622,12 @@ DEF_INST( vector_select )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_fp_multiply_and_subtract )
 {
+/* ============================================= */
+/* TEMPORARY while zvector.c is being developed */
+#if defined(__GNUC__)
+    #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#endif
+/* ============================================= */ 
     int     v1, v2, v3, v4, m5, m6;
 
     VRR_E( inst, regs, v1, v2, v3, v4, m5, m6 );
@@ -2099,16 +2664,47 @@ DEF_INST( vector_fp_multiply_and_add )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_pack )
 {
-    int     v1, v2, v3, m4, m5, m6;
+    int     v1, v2, v3, m4, m5, m6, i;
+    U16     temp16[16];
+    U32     temp32[8];
+    U64     temp64[4];
 
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
+    UNREFERENCED(m5);                // Not used
+    UNREFERENCED(m6);                // Not used
+
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+    switch (m4)
+    {
+    case 1:
+        for (i=0; i < 8; i++) {
+            temp16[i] = regs->VR_H(v2, i);
+            temp16[i+8] = regs->VR_H(v3, i);
+        }
+        for (i=0; i < 16; i++) 
+            regs->VR_B(v1, i) = (U8) temp16[i] & UCHAR_MAX;
+        break;
+    case 2:
+        for (i=0; i < 4; i++) {
+            temp32[i] = regs->VR_F(v2, i);
+            temp32[i+4] = regs->VR_F(v3, i);
+        }
+        for (i=0; i < 8; i++) 
+            regs->VR_H(v1, i) = (U16) temp32[i] & USHRT_MAX;
+        break;
+    case 3:
+        for (i=0; i < 2; i++) {
+            temp64[i] = regs->VR_D(v2, i);
+            temp64[i+2] = regs->VR_D(v3, i);
+        }
+        for (i=0; i < 4; i++) 
+            regs->VR_F(v1, i) = (U32) temp64[i] & UINT_MAX;
+        break;
+    default:
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+        break;
+    }
     ZVECTOR_END( regs );
 }
 
@@ -2136,8 +2732,8 @@ DEF_INST(vector_pack_logical_saturate)
               temp16[i+8] = regs->VR_H(v3, i);
         }
         for (i=0; i < 16; i++) {
-            if (temp16[i] > 0xff) {
-                regs->VR_B(v1, i) = 0xff;
+            if (temp16[i] > UCHAR_MAX) {
+                regs->VR_B(v1, i) = UCHAR_MAX;
                 sat++;
             }
             else regs->VR_B(v1, i) = (U8) temp16[i];
@@ -2149,8 +2745,8 @@ DEF_INST(vector_pack_logical_saturate)
               temp32[i+4] = regs->VR_F(v3, i);
         }
         for (i=0; i < 8; i++) {
-            if (temp32[i] > 0xffff) {
-                regs->VR_H(v1, i) = 0xffff;
+            if (temp32[i] > USHRT_MAX) {
+                regs->VR_H(v1, i) = USHRT_MAX;
                 sat++;
             }
             else regs->VR_H(v1, i) = (U16) temp32[i];
@@ -2162,8 +2758,8 @@ DEF_INST(vector_pack_logical_saturate)
               temp64[i+2] = regs->VR_D(v3, i);
         }
         for (i=0; i < 4; i++) {
-            if (temp64[i] > 0xffffffff) {
-                regs->VR_F(v1, i) = 0xffffffff;
+            if (temp64[i] > UINT_MAX) {
+                regs->VR_F(v1, i) = UINT_MAX;
                 sat++;
             }
             else regs->VR_F(v1, i) = (U32) temp64[i];
@@ -2192,17 +2788,75 @@ DEF_INST(vector_pack_logical_saturate)
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_pack_saturate )
 {
-    int     v1, v2, v3, m4, m5;
+    int     v1, v2, v3, m4, m5, sat = 0, i;
+    S16     temp16[16];
+    S32     temp32[8];
+    S64     temp64[4];
 
     VRR_B( inst, regs, v1, v2, v3, m4, m5 );
 
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+#define M5_CS ((m5 & 0x1) != 0) // Condition Code Set
+    switch (m4)
+    {
+    case 1:
+        for (i=0; i < 8; i++) {
+              temp16[i]   = (S16) regs->VR_H(v2, i);
+              temp16[i+8] = (S16) regs->VR_H(v3, i);
+        }
+        for (i=0; i < 16; i++) {
+            if (temp16[i] > SCHAR_MAX) {
+                regs->VR_B(v1, i) = (U8) SCHAR_MAX;
+                sat++;
+            }
+            else regs->VR_B(v1, i) = (S8) temp16[i];
+        }
+        break;
+    case 2:
+        for (i=0; i < 4; i++) {
+              temp32[i]   = (S32) regs->VR_F(v2, i);
+              temp32[i+4] = (S32) regs->VR_F(v3, i);
+        }
+        for (i=0; i < 8; i++) {
+            if (temp32[i] > SHRT_MAX) {
+                regs->VR_H(v1, i) = (U16) SHRT_MAX;
+                sat++;
+            }
+            else regs->VR_H(v1, i) = (S16) temp32[i];
+        }
+        break;
+    case 3:
+        for (i=0; i < 2; i++) {
+              temp64[i]   = (S64) regs->VR_D(v2, i);
+              temp64[i+2] = (S64) regs->VR_D(v3, i);
+        }
+        for (i=0; i < 4; i++) {
+            if (temp64[i] > INT_MAX) {
+                regs->VR_F(v1, i) = (U32) INT_MAX;
+                sat++;
+            }
+            else regs->VR_F(v1, i) = (S32) temp64[i];
+        }
+        break;
+    default:
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+        break;
+    }
+
+    if (M5_CS) {               // if M5_CS (Condition Code Set)
+        if (sat == 0) 
+            regs->psw.cc = 0;
+        else if (sat < 16)
+            regs->psw.cc = 1;
+        else if (sat == 16)
+            regs->psw.cc = 3;
+    }
+
+#undef M5_CS
+    
     ZVECTOR_END( regs );
+
 }
 
 /*-------------------------------------------------------------------*/
@@ -2210,16 +2864,34 @@ DEF_INST( vector_pack_saturate )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_multiply_logical_high )
 {
-    int     v1, v2, v3, m4, m5, m6;
+    int     v1, v2, v3, m4, m5, m6, i;
 
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
+    UNREFERENCED(m5);                    // Not used
+    UNREFERENCED(m6);                    // Not used
+
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    switch (m4)
+    {
+    case 0:
+        for (i=0; i < 16; i++)
+            regs->VR_B(v1, i) = (regs->VR_B(v2, i) * regs->VR_B(v3, i)) >> 8;
+        break;
+    case 1:
+        for (i=0; i < 8; i++)
+            regs->VR_H(v1, i) = (regs->VR_H(v2, i) * regs->VR_H(v3, i)) >> 16;
+        break;
+    case 2:
+        for (i=0; i < 4; i++)
+            regs->VR_F(v1, i) = ((U64) (regs->VR_F(v2, i) * regs->VR_F(v3, i))) >> 32;
+        break;
+    default:
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+        break;
+    }
+
     ZVECTOR_END( regs );
 }
 
@@ -2232,21 +2904,24 @@ DEF_INST( vector_multiply_low )
 
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
+    UNREFERENCED(m5);                    // Not used
+    UNREFERENCED(m6);                    // Not used
+
     ZVECTOR_CHECK( regs );
 
     switch (m4)
     {
     case 0:
         for (i=0; i < 16; i++)
-            regs->VR_B(v1, i) = (regs->VR_B(v2, i) * regs->VR_B(v3, i)) & 0xff;
+            regs->VR_B(v1, i) = (regs->VR_B(v2, i) * regs->VR_B(v3, i)) & UCHAR_MAX;
         break;
     case 1:
         for (i=0; i < 8; i++)
-            regs->VR_H(v1, i) = (regs->VR_H(v2, i) * regs->VR_H(v3, i)) & 0xffff;
+            regs->VR_H(v1, i) = (regs->VR_H(v2, i) * regs->VR_H(v3, i)) & USHRT_MAX;
         break;
     case 2:
         for (i=0; i < 4; i++)
-            regs->VR_F(v1, i) = (regs->VR_F(v2, i) * regs->VR_F(v3, i)) & 0xffffffff;
+            regs->VR_F(v1, i) = (regs->VR_F(v2, i) * regs->VR_F(v3, i)) & UINT_MAX;
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -2261,16 +2936,34 @@ DEF_INST( vector_multiply_low )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_multiply_high )
 {
-    int     v1, v2, v3, m4, m5, m6;
+    int     v1, v2, v3, m4, m5, m6, i;
 
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
+    UNREFERENCED(m5);                    // Not used
+    UNREFERENCED(m6);                    // Not used
+
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    switch (m4)
+    {
+    case 0:
+        for (i=0; i < 16; i++)
+            regs->VR_B(v1, i) = ((S8)regs->VR_B(v2, i) * (S8)regs->VR_B(v3, i)) >> 8;
+        break;
+    case 1:
+        for (i=0; i < 8; i++)
+            regs->VR_H(v1, i) = ((S16)regs->VR_H(v2, i) * (S16)regs->VR_H(v3, i)) >> 16;
+        break;
+    case 2:
+        for (i=0; i < 4; i++)
+            regs->VR_F(v1, i) = ((S64) ((S32)regs->VR_F(v2, i) * (S32)regs->VR_F(v3, i))) >> 32;
+        break;
+    default:
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+        break;
+    }
+
     ZVECTOR_END( regs );
 }
 
@@ -2279,16 +2972,33 @@ DEF_INST( vector_multiply_high )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_multiply_logical_even )
 {
-    int     v1, v2, v3, m4, m5, m6;
+    int     v1, v2, v3, m4, m5, m6, i;
 
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
+    UNREFERENCED(m5);               // Not used
+    UNREFERENCED(m6);               // Not used
+    
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    switch (m4)
+    {
+    case 0:
+        for (i = 0; i < 8; i++)
+            regs->VR_H(v1, i) = (U16) regs->VR_B(v2, i*2) * regs->VR_B(v3, i*2);
+        break;
+    case 1:
+        for (i = 0; i < 4; i++)
+            regs->VR_F(v1, i) = (U32) regs->VR_H(v2, i*2) * regs->VR_H(v3, i*2);
+        break;
+    case 2:
+        for (i = 0; i < 2; i++)
+            regs->VR_D(v1, i) = (U64) regs->VR_F(v2, i*2) * regs->VR_F(v3, i*2);
+        break;
+    default:
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+        break;
+    }
     ZVECTOR_END( regs );
 }
 
@@ -2297,16 +3007,33 @@ DEF_INST( vector_multiply_logical_even )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_multiply_logical_odd )
 {
-    int     v1, v2, v3, m4, m5, m6;
+    int     v1, v2, v3, m4, m5, m6, i;
 
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
+    UNREFERENCED(m5);               // Not used
+    UNREFERENCED(m6);               // Not used
+    
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    switch (m4)
+    {
+    case 0:
+        for (i = 0; i < 8; i++)
+            regs->VR_H(v1, i) = (U16) regs->VR_B(v2, i*2+1) * regs->VR_B(v3, i*2+1);
+        break;
+    case 1:
+        for (i = 0; i < 4; i++)
+            regs->VR_F(v1, i) = (U32) regs->VR_H(v2, i*2+1) * regs->VR_H(v3, i*2+1);
+        break;
+    case 2:
+        for (i = 0; i < 2; i++)
+            regs->VR_D(v1, i) = (U64) regs->VR_F(v2, i*2+1) * regs->VR_F(v3, i*2+1);
+        break;
+    default:
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+        break;
+    }
     ZVECTOR_END( regs );
 }
 
@@ -2315,16 +3042,33 @@ DEF_INST( vector_multiply_logical_odd )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_multiply_even )
 {
-    int     v1, v2, v3, m4, m5, m6;
+    int     v1, v2, v3, m4, m5, m6, i;
 
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
+    UNREFERENCED(m5);               // Not used
+    UNREFERENCED(m6);               // Not used
+    
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    switch (m4)
+    {
+    case 0:
+        for (i = 0; i < 8; i++)
+            regs->VR_H(v1, i) = (S16)( (S8)regs->VR_B(v2, i*2) * (S8)regs->VR_B(v3, i*2) );
+        break;
+    case 1:
+        for (i = 0; i < 4; i++)
+            regs->VR_F(v1, i) = (S32)( (S16)regs->VR_H(v2, i*2) * (S16)regs->VR_H(v3, i*2) );
+        break;
+    case 2:
+        for (i = 0; i < 2; i++)
+            regs->VR_D(v1, i) = (S64)( (S32)regs->VR_F(v2, i*2) * (S32)regs->VR_F(v3, i*2) );
+        break;
+    default:
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+        break;
+    }
     ZVECTOR_END( regs );
 }
 
@@ -2333,16 +3077,33 @@ DEF_INST( vector_multiply_even )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_multiply_odd )
 {
-    int     v1, v2, v3, m4, m5, m6;
+    int     v1, v2, v3, m4, m5, m6, i;
 
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
+    UNREFERENCED(m5);               // Not used
+    UNREFERENCED(m6);               // Not used
+    
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    switch (m4)
+    {
+    case 0:
+        for (i = 0; i < 8; i++)
+            regs->VR_H(v1, i) = (S16)( (S8)regs->VR_B(v2, i*2+1) * (S8)regs->VR_B(v3, i*2+1) );
+        break;
+    case 1:
+        for (i = 0; i < 4; i++)
+            regs->VR_F(v1, i) = (S32)( (S16)regs->VR_H(v2, i*2+1) * (S16)regs->VR_H(v3, i*2+1) );
+        break;
+    case 2:
+        for (i = 0; i < 2; i++)
+            regs->VR_D(v1, i) = (S64)( (S32)regs->VR_F(v2, i*2+1) * (S32)regs->VR_F(v3, i*2+1) );
+        break;
+    default:
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+        break;
+    }
     ZVECTOR_END( regs );
 }
 
@@ -2351,17 +3112,34 @@ DEF_INST( vector_multiply_odd )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_multiply_and_add_logical_high )
 {
-    int     v1, v2, v3, v4, m5, m6;
+    int     v1, v2, v3, v4, m5, m6, i;
 
-    VRR_D( inst, regs, v1, v2, v3, v4, m5, m6 );
+    VRR_D(inst, regs, v1, v2, v3, v4, m5, m6);
 
-    ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
-    ZVECTOR_END( regs );
+    UNREFERENCED(m6);             // Not used
+
+    ZVECTOR_CHECK(regs);
+
+    switch (m5)
+    {
+    case 0:
+        for (i = 0; i < 16; i++)
+            regs->VR_B(v1, i) = (regs->VR_B(v2, i) * regs->VR_B(v3, i) + regs->VR_B(v4, i)) >> 8 & UCHAR_MAX;
+        break;
+    case 1:
+        for (i=0; i < 8; i++)
+            regs->VR_H(v1, i) = (regs->VR_H(v2, i) * regs->VR_H(v3, i) + regs->VR_H(v4, i)) >> 16 & USHRT_MAX;
+        break;
+    case 2:
+        for (i=0; i < 4; i++)
+            regs->VR_F(v1, i) = (U64)(regs->VR_F(v2, i) * regs->VR_F(v3, i) + regs->VR_F(v4, i)) >> 32 & UINT_MAX;
+        break;
+    default:
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+        break;
+    }
+
+    ZVECTOR_END(regs);
 }
 
 /*-------------------------------------------------------------------*/
@@ -2373,21 +3151,23 @@ DEF_INST(vector_multiply_and_add_low)
 
     VRR_D(inst, regs, v1, v2, v3, v4, m5, m6);
 
+    UNREFERENCED(m6);             // Not used
+
     ZVECTOR_CHECK(regs);
 
     switch (m5)
     {
     case 0:
-        for (i=0; i < 16; i++)
-            regs->VR_B(v1, i) = (regs->VR_B(v2, i) * regs->VR_B(v3, i) + regs->VR_B(v4, i)) & 0xff;
+        for (i = 0; i < 16; i++)
+            regs->VR_B(v1, i) = ((S8)regs->VR_B(v2, i) * (S8)regs->VR_B(v3, i) + (S8)regs->VR_B(v4, i)) & UCHAR_MAX;
         break;
     case 1:
         for (i=0; i < 8; i++)
-            regs->VR_H(v1, i) = (regs->VR_H(v2, i) * regs->VR_H(v3, i) + regs->VR_H(v4, i)) & 0xffff;
+            regs->VR_H(v1, i) = ((S16)regs->VR_H(v2, i) * (S16)regs->VR_H(v3, i) + (S16)regs->VR_H(v4, i)) & USHRT_MAX;
         break;
     case 2:
         for (i=0; i < 4; i++)
-            regs->VR_F(v1, i) = (regs->VR_F(v2, i) * regs->VR_F(v3, i) + regs->VR_F(v4, i)) & 0xffffffff;
+            regs->VR_F(v1, i) = ((S32)regs->VR_F(v2, i) * (S32)regs->VR_F(v3, i) + (S32)regs->VR_F(v4, i)) & UINT_MAX;
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -2402,17 +3182,34 @@ DEF_INST(vector_multiply_and_add_low)
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_multiply_and_add_high )
 {
-    int     v1, v2, v3, v4, m5, m6;
+    int     v1, v2, v3, v4, m5, m6, i;
 
-    VRR_D( inst, regs, v1, v2, v3, v4, m5, m6 );
+    VRR_D(inst, regs, v1, v2, v3, v4, m5, m6);
 
-    ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
-    ZVECTOR_END( regs );
+    UNREFERENCED(m6);             // Not used
+
+    ZVECTOR_CHECK(regs);
+
+    switch (m5)
+    {
+    case 0:
+        for (i = 0; i < 16; i++)
+            regs->VR_B(v1, i) = ((S8)regs->VR_B(v2, i) * (S8)regs->VR_B(v3, i) + (S8)regs->VR_B(v4, i)) >> 8 & UCHAR_MAX;
+        break;
+    case 1:
+        for (i=0; i < 8; i++)
+            regs->VR_H(v1, i) = ((S16)regs->VR_H(v2, i) * (S16)regs->VR_H(v3, i) + (S16)regs->VR_H(v4, i)) >> 16 & USHRT_MAX;
+        break;
+    case 2:
+        for (i=0; i < 4; i++)
+            regs->VR_F(v1, i) = (S64)((S32)regs->VR_F(v2, i) * (S32)regs->VR_F(v3, i) + (S32)regs->VR_F(v4, i)) >> 32 & UINT_MAX;
+        break;
+    default:
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+        break;
+    }
+
+    ZVECTOR_END(regs);
 }
 
 /*-------------------------------------------------------------------*/
@@ -2420,16 +3217,32 @@ DEF_INST( vector_multiply_and_add_high )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_multiply_and_add_logical_even )
 {
-    int     v1, v2, v3, v4, m5, m6;
+    int     v1, v2, v3, v4, m5, m6, i;
 
     VRR_D( inst, regs, v1, v2, v3, v4, m5, m6 );
 
+    UNREFERENCED(m6);               // Not used
+    
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    switch (m5)
+    {
+    case 0:
+        for (i = 0; i < 8; i++)
+            regs->VR_H(v1, i) = (U16) regs->VR_B(v2, i*2) * regs->VR_B(v3, i*2) + regs->VR_B(v4, i*2);
+        break;
+    case 1:
+        for (i = 0; i < 4; i++)
+            regs->VR_F(v1, i) = (U32) regs->VR_H(v2, i*2) * regs->VR_H(v3, i*2) + regs->VR_H(v4, i*2);
+        break;
+    case 2:
+        for (i = 0; i < 2; i++)
+            regs->VR_D(v1, i) = (U64) regs->VR_F(v2, i*2) * regs->VR_F(v3, i*2) + regs->VR_F(v4, i*2);
+        break;
+    default:
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+        break;
+    }
     ZVECTOR_END( regs );
 }
 
@@ -2438,34 +3251,67 @@ DEF_INST( vector_multiply_and_add_logical_even )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_multiply_and_add_logical_odd )
 {
-    int     v1, v2, v3, v4, m5, m6;
+    int     v1, v2, v3, v4, m5, m6, i;
 
     VRR_D( inst, regs, v1, v2, v3, v4, m5, m6 );
 
+    UNREFERENCED(m6);               // Not used
+    
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    switch (m5)
+    {
+    case 0:
+        for (i = 0; i < 8; i++)
+            regs->VR_H(v1, i) = (U16) regs->VR_B(v2, i*2+1) * regs->VR_B(v3, i*2+1) + regs->VR_B(v4, i*2+1);
+        break;
+    case 1:
+        for (i = 0; i < 4; i++)
+            regs->VR_F(v1, i) = (U32) regs->VR_H(v2, i*2+1) * regs->VR_H(v3, i*2+1) + regs->VR_H(v4, i*2+1);
+        break;
+    case 2:
+        for (i = 0; i < 2; i++)
+            regs->VR_D(v1, i) = (U64) regs->VR_F(v2, i*2+1) * regs->VR_F(v3, i*2+1) + regs->VR_F(v4, i*2+1);
+        break;
+    default:
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+        break;
+    }
     ZVECTOR_END( regs );
 }
+
 
 /*-------------------------------------------------------------------*/
 /* E7AE VMAE   - Vector Multiply and Add Even                [VRR-d] */
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_multiply_and_add_even )
 {
-    int     v1, v2, v3, v4, m5, m6;
+    int     v1, v2, v3, v4, m5, m6, i;
 
     VRR_D( inst, regs, v1, v2, v3, v4, m5, m6 );
 
+    UNREFERENCED(m6);               // Not used
+    
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    switch (m5)
+    {
+    case 0:
+        for (i = 0; i < 8; i++)
+            regs->VR_H(v1, i) = (S16)(S8)regs->VR_B(v2, i*2) * (S8)regs->VR_B(v3, i*2) + (S8)regs->VR_B(v4, i*2);
+        break;
+    case 1:
+        for (i = 0; i < 4; i++)
+            regs->VR_F(v1, i) = (U32)(S16)regs->VR_H(v2, i*2) * (S16)regs->VR_H(v3, i*2) + (S16)regs->VR_H(v4, i*2);
+        break;
+    case 2:
+        for (i = 0; i < 2; i++)
+            regs->VR_D(v1, i) = (U64)(S32)regs->VR_F(v2, i*2) * (S32)regs->VR_F(v3, i*2) + (S32)regs->VR_F(v4, i*2);
+        break;
+    default:
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+        break;
+    }
     ZVECTOR_END( regs );
 }
 
@@ -2474,16 +3320,32 @@ DEF_INST( vector_multiply_and_add_even )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_multiply_and_add_odd )
 {
-    int     v1, v2, v3, v4, m5, m6;
+    int     v1, v2, v3, v4, m5, m6, i;
 
     VRR_D( inst, regs, v1, v2, v3, v4, m5, m6 );
 
+    UNREFERENCED(m6);               // Not used
+    
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    switch (m5)
+    {
+    case 0:
+        for (i = 0; i < 8; i++)
+            regs->VR_H(v1, i) = (S16)(S8)regs->VR_B(v2, i*2+1) * (S8)regs->VR_B(v3, i*2+1) + (S8)regs->VR_B(v4, i*2+1);
+        break;
+    case 1:
+        for (i = 0; i < 4; i++)
+            regs->VR_F(v1, i) = (U32)(S16)regs->VR_H(v2, i*2+1) * (S16)regs->VR_H(v3, i*2+1) + (S16)regs->VR_H(v4, i*2+1);
+        break;
+    case 2:
+        for (i = 0; i < 2; i++)
+            regs->VR_D(v1, i) = (U64)(S32)regs->VR_F(v2, i*2+1) * (S32)regs->VR_F(v3, i*2+1) + (S32)regs->VR_F(v4, i*2+1);
+        break;
+    default:
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+        break;
+    }
     ZVECTOR_END( regs );
 }
 
@@ -2799,32 +3661,35 @@ DEF_INST( vector_fp_square_root )
 DEF_INST( vector_unpack_logical_low )
 {
     int     v1, v2, m3, m4, m5, i;
-    U16      temp16[8];
-    U32      temp32[4];
-    U64      temp64[2];
+    U16     temp16[8];
+    U32     temp32[4];
+    U64     temp64[2];
 
     VRR_A( inst, regs, v1, v2, m3, m4, m5 );
+    
+    UNREFERENCED(m4);              // Not used
+    UNREFERENCED(m5);              // Not used
 
     ZVECTOR_CHECK( regs );
 
     switch (m3)
     {
     case 0:
-        for (i = 0; i < 8; i++)
+        for (i=0; i < 8; i++)
             temp16[i] = (U16) regs->VR_B(v2, i + 8);
-        for (i = 0; i < 8; i++)
+        for (i=0; i < 8; i++)
             regs->VR_H(v1, i) = temp16[i];
         break;
     case 1:
-        for (i = 0; i < 4; i++)
+        for (i=0; i < 4; i++)
             temp32[i] = (U32) regs->VR_H(v2, i + 4);
-        for (i = 0; i < 4; i++)
+        for (i=0; i < 4; i++)
             regs->VR_F(v1, i) = temp32[i];
         break;
     case 2:
-        for (i = 0; i < 2; i++)
+        for (i=0; i < 2; i++)
             temp64[i] = (U64) regs->VR_F(v2, i + 2);
-        for (i = 0; i < 2; i++)
+        for (i=0; i < 2; i++)
             regs->VR_D(v1, i) = temp64[i];
         break;
     default:
@@ -2841,32 +3706,35 @@ DEF_INST( vector_unpack_logical_low )
 DEF_INST( vector_unpack_logical_high )
 {
     int     v1, v2, m3, m4, m5, i;
-    U16      temp16[8];
-    U32      temp32[4];
-    U64      temp64[2];
+    U16     temp16[8];
+    U32     temp32[4];
+    U64     temp64[2];
 
     VRR_A( inst, regs, v1, v2, m3, m4, m5 );
+
+    UNREFERENCED(m4);              // Not used
+    UNREFERENCED(m5);              // Not used
 
     ZVECTOR_CHECK( regs );
     
     switch (m3)
     {
     case 0:
-        for (i = 0; i < 8; i++)
+        for (i=0; i < 8; i++)
             temp16[i] = (U16) regs->VR_B(v2, i);
-        for (i = 0; i < 8; i++)
+        for (i=0; i < 8; i++)
             regs->VR_H(v1, i) = temp16[i];
         break;
     case 1:
-        for (i = 0; i < 4; i++)
+        for (i=0; i < 4; i++)
             temp32[i] = (U32) regs->VR_H(v2, i);
-        for (i = 0; i < 4; i++)
+        for (i=0; i < 4; i++)
             regs->VR_F(v1, i) = temp32[i];
         break;
     case 2:
-        for (i = 0; i < 2; i++)
+        for (i=0; i < 2; i++)
             temp64[i] = (U64) regs->VR_F(v2, i);
-        for (i = 0; i < 2; i++)
+        for (i=0; i < 2; i++)
             regs->VR_D(v1, i) = temp64[i];
         break;
     default:
@@ -2882,16 +3750,43 @@ DEF_INST( vector_unpack_logical_high )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_unpack_low )
 {
-    int     v1, v2, m3, m4, m5;
+    int     v1, v2, m3, m4, m5, i;
+    S16     temp16[8];
+    S32     temp32[4];
+    S64     temp64[2];
 
     VRR_A( inst, regs, v1, v2, m3, m4, m5 );
 
+    UNREFERENCED(m4);              // Not used
+    UNREFERENCED(m5);              // Not used
+
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    switch (m3)
+    {
+    case 0:
+        for (i=0; i < 8; i++)
+            temp16[i] = (S16)(S8) regs->VR_B(v2, i + 8);
+        for (i=0; i < 8; i++)
+            regs->VR_H(v1, i) = temp16[i];
+        break;
+    case 1:
+        for (i=0; i < 4; i++)
+            temp32[i] = (S32)(S16) regs->VR_H(v2, i + 4);
+        for (i=0; i < 4; i++)
+            regs->VR_F(v1, i) = temp32[i];
+        break;
+    case 2:
+        for (i=0; i < 2; i++)
+            temp64[i] = (S64)(S32) regs->VR_F(v2, i + 2);
+        for (i=0; i < 2; i++)
+            regs->VR_D(v1, i) = temp64[i];
+        break;
+    default:
+        ARCH_DEP(program_interrupt) (regs, PGM_SPECIFICATION_EXCEPTION);
+        break;
+    }
+
     ZVECTOR_END( regs );
 }
 
@@ -2900,16 +3795,43 @@ DEF_INST( vector_unpack_low )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_unpack_high )
 {
-    int     v1, v2, m3, m4, m5;
+    int     v1, v2, m3, m4, m5, i;
+    S16     temp16[8];
+    S32     temp32[4];
+    S64     temp64[2];
 
     VRR_A( inst, regs, v1, v2, m3, m4, m5 );
 
+    UNREFERENCED(m4);              // Not used
+    UNREFERENCED(m5);              // Not used
+
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    switch (m3)
+    {
+    case 0:
+        for (i=0; i < 8; i++)
+            temp16[i] = (S16)(S8) regs->VR_B(v2, i);
+        for (i=0; i < 8; i++)
+            regs->VR_H(v1, i) = temp16[i];
+        break;
+    case 1:
+        for (i=0; i < 4; i++)
+            temp32[i] = (S32)(S16) regs->VR_H(v2, i);
+        for (i=0; i < 4; i++)
+            regs->VR_F(v1, i) = temp32[i];
+        break;
+    case 2:
+        for (i=0; i < 2; i++)
+            temp64[i] = (S64)(S32) regs->VR_F(v2, i);
+        for (i=0; i < 2; i++)
+            regs->VR_D(v1, i) = temp64[i];
+        break;
+    default:
+        ARCH_DEP(program_interrupt) (regs, PGM_SPECIFICATION_EXCEPTION);
+        break;
+    }
+
     ZVECTOR_END( regs );
 }
 
@@ -3259,9 +4181,9 @@ DEF_INST(vector_subtract)
     int     v1, v2, v3, m4, m5, m6, i;
     U64     high, low;
     
-     VRR_C(inst, regs, v1, v2, v3, m4, m5, m6);
+    VRR_C(inst, regs, v1, v2, v3, m4, m5, m6);
     
-     ZVECTOR_CHECK(regs);
+    ZVECTOR_CHECK(regs);
 
     switch (m4)
     {
@@ -3319,11 +4241,11 @@ DEF_INST( vector_compare_equal )
     case 0:
         for (i=0; i < 16; i++) {
             if (regs->VR_B(v2, i) == regs->VR_B(v3, i)) {
-                regs->VR_B(v1, i) = 0xff;
+                regs->VR_B(v1, i) = UCHAR_MAX;
                 eq++;
             }
             else {
-                regs->VR_B(v1, i) = 0x00;
+                regs->VR_B(v1, i) = 0;
                 ne++;
             }
         }
@@ -3331,11 +4253,11 @@ DEF_INST( vector_compare_equal )
     case 1:
         for (i=0; i < 8; i++) {
             if (regs->VR_H(v2, i) == regs->VR_H(v3, i)) {
-                regs->VR_H(v1, i) = 0xffff;
+                regs->VR_H(v1, i) = USHRT_MAX;
                 eq++;
             }
             else {
-                regs->VR_H(v1, i) = 0x0000;
+                regs->VR_H(v1, i) = 0;
                 ne++;
             }
         }
@@ -3343,11 +4265,11 @@ DEF_INST( vector_compare_equal )
     case 2:
         for (i=0; i < 4; i++) {
             if (regs->VR_F(v2, i) == regs->VR_F(v3, i)) {
-                regs->VR_F(v1, i) = 0xffffffff;
+                regs->VR_F(v1, i) = UINT_MAX;
                 eq++;
             }
             else {
-                regs->VR_F(v1, i) = 0x00000000;
+                regs->VR_F(v1, i) = 0;
                 ne++;
             }
         }
@@ -3355,11 +4277,11 @@ DEF_INST( vector_compare_equal )
     case 3:
         for (i=0; i < 2; i++) {
             if (regs->VR_D(v2, i) == regs->VR_D(v3, i)) {
-                regs->VR_D(v1, i) = 0xffffffffffffffff;
+                regs->VR_D(v1, i) = ULLONG_MAX;
                 eq++;
             }
             else {
-                regs->VR_D(v1, i) = 0x0000000000000000;
+                regs->VR_D(v1, i) = 0;
                 ne++;
             }
         }

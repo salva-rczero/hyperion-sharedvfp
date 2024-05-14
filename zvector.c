@@ -3409,8 +3409,7 @@ DEF_INST( vector_galois_field_multiply_sum )
             U64 b = VR_UD(v3, i);
             tempQ[i] = _mm_clmulepi64_si128(_mm_set_epi64x(0, a), _mm_set_epi64x(0, b), 0);
         }
-        VR_UD(v1, 1) = tempQ[0].m128i_u64[0] ^ tempQ[1].m128i_u64[0];
-        VR_UD(v1, 0) = tempQ[0].m128i_u64[1] ^ tempQ[1].m128i_u64[1];
+        VR_Q(v1).v = _mm_xor_si128(tempQ[0], tempQ[1]);
         break;
     default:
         ARCH_DEP(program_interrupt) (regs, PGM_SPECIFICATION_EXCEPTION);
@@ -3552,8 +3551,8 @@ DEF_INST( vector_galois_field_multiply_sum_and_accumulate )
             tempQ[i] = _mm_clmulepi64_si128(_mm_set_epi64x(0, a), _mm_set_epi64x(0, b), 0);
         }
         result = _mm_set_epi64x(VR_UD(v4,0), VR_UD(v4, 1));
-        VR_UD(v1, 1) = tempQ[0].m128i_u64[0] ^ tempQ[1].m128i_u64[0] ^ result.m128i_u64[0];
-        VR_UD(v1, 0) = tempQ[0].m128i_u64[1] ^ tempQ[1].m128i_u64[1] ^ result.m128i_u64[1];
+        result = _mm_xor_si128(result, tempQ[0]);
+        VR_Q(v1).v = _mm_xor_si128(result, tempQ[1]);
         break;
     default:
         ARCH_DEP(program_interrupt) (regs, PGM_SPECIFICATION_EXCEPTION);
@@ -3573,15 +3572,27 @@ DEF_INST( vector_galois_field_multiply_sum_and_accumulate )
 DEF_INST( vector_subtract_with_borrow_compute_borrow_indication )
 {
     int     v1, v2, v3, v4, m5, m6;
+    U64     high, low;
 
     VRR_D( inst, regs, v1, v2, v3, v4, m5, m6 );
 
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    switch (m5)
+    {
+    case 4:
+        low = VR_UD(v2, 1) + ~VR_UD(v3, 1) + (VR_UD(v4, 1) & 0x01);
+        high = VR_UD(v2, 0) + ~VR_UD(v3, 0);
+        if (low < VR_UD(v2, 1))
+            high++;
+        VR_UD(v1, 0) = 0;
+        VR_UD(v1, 1) = high < VR_UD(v2, 0) ? 1 : 0;
+        break;
+    default:
+        ARCH_DEP(program_interrupt) (regs, PGM_SPECIFICATION_EXCEPTION);
+        break;
+    }
+
     ZVECTOR_END( regs );
 }
 
@@ -3591,22 +3602,34 @@ DEF_INST( vector_subtract_with_borrow_compute_borrow_indication )
 DEF_INST( vector_subtract_with_borrow_indication )
 {
     int     v1, v2, v3, v4, m5, m6;
+    U64     high, low;
 
     VRR_D( inst, regs, v1, v2, v3, v4, m5, m6 );
 
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    switch (m5)
+    {
+    case 4:
+        low = VR_UD(v2, 1) + ~VR_UD(v3, 1) + (VR_UD(v4, 1) & 0x01);
+        high = VR_UD(v2, 0) + ~VR_UD(v3, 0);
+        if (low < VR_UD(v2, 1))
+            high++;
+        VR_UD(v1, 0) = high;
+        VR_UD(v1, 1) = low;
+        break;
+    default:
+        ARCH_DEP(program_interrupt) (regs, PGM_SPECIFICATION_EXCEPTION);
+        break;
+    }
+
     ZVECTOR_END( regs );
 }
 
 /*-------------------------------------------------------------------*/
-/* E7C0 VCLGD  - Vector FP Convert to Logical 64-bit         [VRR-a] */
+/* E7C0 VCLGD  - Vector FP Convert to Logical                [VRR-a] */
 /*-------------------------------------------------------------------*/
-DEF_INST( vector_fp_convert_to_logical_64_bit )
+DEF_INST( vector_fp_convert_to_logical )
 {
     int     v1, v2, m3, m4, m5;
 
@@ -3622,9 +3645,9 @@ DEF_INST( vector_fp_convert_to_logical_64_bit )
 }
 
 /*-------------------------------------------------------------------*/
-/* E7C1 VCDLG  - Vector FP Convert from Logical 64-bit       [VRR-a] */
+/* E7C1 VCDLG  - Vector FP Convert from Logical              [VRR-a] */
 /*-------------------------------------------------------------------*/
-DEF_INST( vector_fp_convert_from_logical_64_bit )
+DEF_INST( vector_fp_convert_from_logical )
 {
     int     v1, v2, m3, m4, m5;
 
@@ -3640,9 +3663,9 @@ DEF_INST( vector_fp_convert_from_logical_64_bit )
 }
 
 /*-------------------------------------------------------------------*/
-/* E7C2 VCGD   - Vector FP Convert to Fixed 64-bit           [VRR-a] */
+/* E7C2 VCGD   - Vector FP Convert to Fixed                  [VRR-a] */
 /*-------------------------------------------------------------------*/
-DEF_INST( vector_fp_convert_to_fixed_64_bit )
+DEF_INST( vector_fp_convert_to_fixed )
 {
     int     v1, v2, m3, m4, m5;
 
@@ -3658,9 +3681,9 @@ DEF_INST( vector_fp_convert_to_fixed_64_bit )
 }
 
 /*-------------------------------------------------------------------*/
-/* E7C3 VCDG   - Vector FP Convert from Fixed 64-bit         [VRR-a] */
+/* E7C3 VCDG   - Vector FP Convert from Fixed                [VRR-a] */
 /*-------------------------------------------------------------------*/
-DEF_INST( vector_fp_convert_from_fixed_64_bit )
+DEF_INST( vector_fp_convert_from_fixed )
 {
     int     v1, v2, m3, m4, m5;
 
@@ -3987,15 +4010,22 @@ DEF_INST( vector_unpack_high )
 DEF_INST( vector_test_under_mask )
 {
     int     v1, v2, m3, m4, m5;
+    U64     high, low;
 
     VRR_A( inst, regs, v1, v2, m3, m4, m5 );
 
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    low = VR_UD(v1, 1) & VR_UD(v2, 1);
+    high = VR_UD(v1, 0) & VR_UD(v2, 0);
+    
+    if (low == 0 && high == 0)
+        regs->psw.cc = 0;
+    else if (low == VR_UD(v2, 1) && high == VR_UD(v2, 0))
+        regs->psw.cc = 3;
+    else 
+        regs->psw.cc = 1;
+
     ZVECTOR_END( regs );
 }
 
@@ -4009,11 +4039,46 @@ DEF_INST( vector_element_compare_logical )
     VRR_A( inst, regs, v1, v2, m3, m4, m5 );
 
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    switch (m3)
+    {
+    case 0:
+        if (VR_UB(v1, 7) == VR_UB(v2, 7))
+            regs->psw.cc = 0;
+        else if (VR_UB(v1, 7) < VR_UB(v2, 7))
+            regs->psw.cc = 1;
+        else 
+            regs->psw.cc = 2;
+        break;
+    case 1:
+        if (VR_UH(v1, 3) == VR_UH(v2, 3))
+            regs->psw.cc = 0;
+        else if (VR_UH(v1, 3) < VR_UH(v2, 3))
+            regs->psw.cc = 1;
+        else 
+            regs->psw.cc = 2;
+        break;
+    case 2:
+        if (VR_UF(v1, 1) == VR_UF(v2, 1))
+            regs->psw.cc = 0;
+        else if (VR_UF(v1, 1) < VR_UF(v2, 1))
+            regs->psw.cc = 1;
+        else 
+            regs->psw.cc = 2;
+        break;
+    case 3:
+        if (VR_UD(v1, 0) == VR_UD(v2, 0))
+            regs->psw.cc = 0;
+        else if (VR_UD(v1, 0) < VR_UD(v2, 0))
+            regs->psw.cc = 1;
+        else 
+            regs->psw.cc = 2;
+        break;
+    default:
+        ARCH_DEP(program_interrupt) (regs, PGM_SPECIFICATION_EXCEPTION);
+        break;
+    }
+
     ZVECTOR_END( regs );
 }
 
@@ -4027,11 +4092,46 @@ DEF_INST( vector_element_compare )
     VRR_A( inst, regs, v1, v2, m3, m4, m5 );
 
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    switch (m3)
+    {
+    case 0:
+        if (VR_SB(v1, 7) == VR_SB(v2, 7))
+            regs->psw.cc = 0;
+        else if (VR_SB(v1, 7) < VR_SB(v2, 7))
+            regs->psw.cc = 1;
+        else 
+            regs->psw.cc = 2;
+        break;
+    case 1:
+        if (VR_SH(v1, 3) == VR_SH(v2, 3))
+            regs->psw.cc = 0;
+        else if (VR_SH(v1, 3) < VR_SH(v2, 3))
+            regs->psw.cc = 1;
+        else 
+            regs->psw.cc = 2;
+        break;
+    case 2:
+        if (VR_SF(v1, 1) == VR_SF(v2, 1))
+            regs->psw.cc = 0;
+        else if (VR_SF(v1, 1) < VR_SF(v2, 1))
+            regs->psw.cc = 1;
+        else 
+            regs->psw.cc = 2;
+        break;
+    case 3:
+        if (VR_SD(v1, 0) == VR_SD(v2, 0))
+            regs->psw.cc = 0;
+        else if (VR_SD(v1, 0) < VR_SD(v2, 0))
+            regs->psw.cc = 1;
+        else 
+            regs->psw.cc = 2;
+        break;
+    default:
+        ARCH_DEP(program_interrupt) (regs, PGM_SPECIFICATION_EXCEPTION);
+        break;
+    }
+
     ZVECTOR_END( regs );
 }
 
@@ -4424,16 +4524,44 @@ DEF_INST(vector_add)
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_subtract_compute_borrow_indication )
 {
-    int     v1, v2, v3, m4, m5, m6;
+    int     v1, v2, v3, m4, m5, m6, i;
+    U64     high, low;
 
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+    switch (m4)
+    {
+    case 0:
+        for (i=0; i < 16; i++)
+            VR_UB(v1, i) = (VR_UB(v2, i) - VR_UB(v3, i)) > VR_UB(v2, i) ? 1 : 0;
+        break;
+    case 1:
+        for (i=0; i < 8; i++)
+            VR_UH(v1, i) = (VR_UH(v2, i) - VR_UH(v3, i)) > VR_UH(v2, i) ? 1 : 0;
+        break;
+    case 2:
+        for (i=0; i < 4; i++)
+            VR_UF(v1, i) = (VR_UF(v2, i) - VR_UF(v3, i)) > VR_UF(v2, i) ? 1 : 0;
+        break;
+    case 3:
+        for (i=0; i < 2; i++)
+            VR_UD(v1, i) = (VR_UD(v2, i) - VR_UD(v3, i)) > VR_UD(v2, i) ? 1 : 0;
+        break;
+    case 4:
+        low = VR_UD(v2, 1) - VR_UD(v3, 1);
+        high = VR_UD(v2, 0) - VR_UD(v3, 0);
+        if (low > VR_UD(v2, 1))
+            high--;
+        VR_UD(v1, 0) = 0;
+        VR_UD(v1, 1) = high > VR_UD(v2, 1) ? 1 : 0;
+        break;
+    default:
+        ARCH_DEP(program_interrupt) (regs, PGM_SPECIFICATION_EXCEPTION);
+        break;
+    }
+
     ZVECTOR_END( regs );
 }
 
@@ -4574,16 +4702,72 @@ DEF_INST( vector_compare_equal )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_compare_high_logical )
 {
-    int     v1, v2, v3, m4, m5;
+    int     v1, v2, v3, m4, m5, i, max, sel;
 
     VRR_B( inst, regs, v1, v2, v3, m4, m5 );
 
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+
+#define M5_CS ((m5 & 0x1) != 0) // Condition Code Set
+    
+    switch (m4)
+    {
+    case 0:
+        max = 16, sel = 0;
+        for (i=0; i < max; i++) {
+            if (VR_UB(v2, i) > VR_UB(v3, i)) {
+                VR_UB(v1, i) = UCHAR_MAX;
+                sel++;
+            }
+            else VR_UB(v1, i) = 0;
+        }
+        break;
+    case 1:
+        max = 8, sel = 0;
+        for (i=0; i < max; i++) {
+            if (VR_UH(v2, i) > VR_UH(v3, i)) {
+                VR_UH(v1, i) = USHRT_MAX;
+                sel++;
+            }
+            else VR_UH(v1, i) = 0;
+        }
+        break;
+    case 2:
+        max = 4, sel = 0;
+        for (i=0; i < max; i++) {
+            if (VR_UF(v2, i) > VR_UF(v3, i)) {
+                VR_UF(v1, i) = UINT_MAX;
+                sel++;
+            }
+            else VR_UF(v1, i) = 0;
+        }
+        break;
+    case 3:
+        max = 2, sel = 0;
+        for (i=0; i < max; i++) {
+            if (VR_UD(v2, i) > VR_UD(v3, i)) {
+                VR_UD(v1, i) = ULLONG_MAX;
+                sel++;
+            }
+            else VR_UD(v1, i) = 0;
+        }
+        break;
+    default:
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+        break;
+    }
+
+    if (M5_CS) {
+        if (max == sel)
+            regs->psw.cc = 0;
+        else if (sel > 0)
+            regs->psw.cc = 1;
+        else if (sel == 0)
+            regs->psw.cc = 3;
+    }
+
+#undef M5_CS
+
     ZVECTOR_END( regs );
 }
 
@@ -4592,16 +4776,71 @@ DEF_INST( vector_compare_high_logical )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_compare_high )
 {
-    int     v1, v2, v3, m4, m5;
+    int     v1, v2, v3, m4, m5, i, max, sel;
 
     VRR_B( inst, regs, v1, v2, v3, m4, m5 );
 
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
-    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    //
+#define M5_CS ((m5 & 0x1) != 0) // Condition Code Set
+    
+    switch (m4)
+    {
+    case 0:
+        max = 16, sel = 0;
+        for (i=0; i < max; i++) {
+            if (VR_SB(v2, i) > VR_SB(v3, i)) {
+                VR_UB(v1, i) = UCHAR_MAX;
+                sel++;
+            }
+            else VR_UB(v1, i) = 0;
+        }
+        break;
+    case 1:
+        max = 8, sel = 0;
+        for (i=0; i < max; i++) {
+            if (VR_SH(v2, i) > VR_SH(v3, i)) {
+                VR_UH(v1, i) = USHRT_MAX;
+                sel++;
+            }
+            else VR_UH(v1, i) = 0;
+        }
+        break;
+    case 2:
+        max = 4, sel = 0;
+        for (i=0; i < max; i++) {
+            if (VR_SF(v2, i) > VR_SF(v3, i)) {
+                VR_UF(v1, i) = UINT_MAX;
+                sel++;
+            }
+            else VR_UF(v1, i) = 0;
+        }
+        break;
+    case 3:
+        max = 2, sel = 0;
+        for (i=0; i < max; i++) {
+            if (VR_SD(v2, i) > VR_SD(v3, i)) {
+                VR_UD(v1, i) = ULLONG_MAX;
+                sel++;
+            }
+            else VR_UD(v1, i) = 0;
+        }
+        break;
+    default:
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+        break;
+    }
+
+    if (M5_CS) {
+        if (max == sel)
+            regs->psw.cc = 0;
+        else if (sel > 0)
+            regs->psw.cc = 1;
+        else if (sel == 0)
+            regs->psw.cc = 3;
+    }
+
+#undef M5_CS
+
     ZVECTOR_END( regs );
 }
 

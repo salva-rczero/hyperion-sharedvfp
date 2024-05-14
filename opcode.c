@@ -774,10 +774,10 @@ DISABLE_GCC_UNUSED_FUNCTION_WARNING;
      UNDEF_INST(vector_galois_field_multiply_sum_and_accumulate)
      UNDEF_INST(vector_subtract_with_borrow_compute_borrow_indication)
      UNDEF_INST(vector_subtract_with_borrow_indication)
-     UNDEF_INST(vector_fp_convert_to_logical_64_bit)
-     UNDEF_INST(vector_fp_convert_from_logical_64_bit)
-     UNDEF_INST(vector_fp_convert_to_fixed_64_bit)
-     UNDEF_INST(vector_fp_convert_from_fixed_64_bit)
+     UNDEF_INST(vector_fp_convert_to_logical)
+     UNDEF_INST(vector_fp_convert_from_logical)
+     UNDEF_INST(vector_fp_convert_to_fixed)
+     UNDEF_INST(vector_fp_convert_from_fixed)
      UNDEF_INST(vector_fp_load_lengthened)
      UNDEF_INST(vector_fp_load_rounded)
      UNDEF_INST(vector_load_fp_integer)
@@ -5103,10 +5103,10 @@ static INSTR_FUNC gen_opcode_e7xx[256][NUM_INSTR_TAB_PTRS] =
  /*E7BD*/ GENx___x___x900("VSBCBI" , VRR_D  , ASMFMT_VRR_D  , vector_subtract_with_borrow_compute_borrow_indication),
  /*E7BE*/ GENx___x___x___ ,
  /*E7BF*/ GENx___x___x900("VSBI"   , VRR_D  , ASMFMT_VRR_D  , vector_subtract_with_borrow_indication),
- /*E7C0*/ GENx___x___x900("VCLGD"  , VRR_A  , ASMFMT_VRR_A  , vector_fp_convert_to_logical_64_bit),
- /*E7C1*/ GENx___x___x900("VCDLG"  , VRR_A  , ASMFMT_VRR_A  , vector_fp_convert_from_logical_64_bit),
- /*E7C2*/ GENx___x___x900("VCGD"   , VRR_A  , ASMFMT_VRR_A  , vector_fp_convert_to_fixed_64_bit),
- /*E7C3*/ GENx___x___x900("VCDG"   , VRR_A  , ASMFMT_VRR_A  , vector_fp_convert_from_fixed_64_bit),
+ /*E7C0*/ GENx___x___x900("VCLGD"  , VRR_A  , ASMFMT_VRR_A  , vector_fp_convert_to_logical),
+ /*E7C1*/ GENx___x___x900("VCDLG"  , VRR_A  , ASMFMT_VRR_A  , vector_fp_convert_from_logical),
+ /*E7C2*/ GENx___x___x900("VCGD"   , VRR_A  , ASMFMT_VRR_A  , vector_fp_convert_to_fixed),
+ /*E7C3*/ GENx___x___x900("VCDG"   , VRR_A  , ASMFMT_VRR_A  , vector_fp_convert_from_fixed),
  /*E7C4*/ GENx___x___x900("VFLL"   , VRR_A  , ASMFMT_VRR_A  , vector_fp_load_lengthened),
  /*E7C5*/ GENx___x___x900("VFLR"   , VRR_A  , ASMFMT_VRR_A  , vector_fp_load_rounded),
  /*E7C6*/ GENx___x___x___ ,

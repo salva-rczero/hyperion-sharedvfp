@@ -2100,6 +2100,8 @@ do {                                                                  \
 
 #define ZVECTOR_CHECK(_regs) \
         TXF_INSTR_CHECK(_regs); \
+        if (0 && inst[5] != (U8) 0x3E && inst[5] != (U8) 0x36) \
+            ARCH_DEP(display_inst) (_regs, inst); \
         if( !((_regs)->CR(0) & CR0_VOP) ) { \
             (_regs)->dxc = DXC_VECTOR_INSTRUCTION; \
             (_regs)->program_interrupt( (_regs), PGM_DATA_EXCEPTION); \

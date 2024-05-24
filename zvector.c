@@ -113,7 +113,7 @@ DEF_INST( vector_load_logical_element_and_zero )
     PER_ZEROADDR_XCHECK2( regs, x2, b2 );
 
 #if defined(_M_X64) || defined( __SSE2__ )
-    VR_Q( v1 ).v = _mm_setzero_si128();
+    VR_Q(v1).v = _mm_setzero_si128();
 #else
     VR_UD(v1, 0) = 0;
     VR_UD(v1, 1) = 0;
@@ -837,6 +837,9 @@ DEF_INST( vector_load_element_immediate_16 )
 
     ZVECTOR_CHECK( regs );
     
+    if (m3 > 7) 
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+    
     VR_SH(v1, m3) = i2;
     
     ZVECTOR_END( regs );
@@ -853,7 +856,10 @@ DEF_INST( vector_load_element_immediate_64 )
 
     ZVECTOR_CHECK( regs );
 
-    VR_UD(v1, m3) = (S64) i2;
+    if (m3 > 1) 
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+
+    VR_SD(v1, m3) = (S64) i2;
     
     ZVECTOR_END( regs );
 }
@@ -868,6 +874,9 @@ DEF_INST( vector_load_element_immediate_32 )
     VRI_A( inst, regs, v1, i2, m3 );
 
     ZVECTOR_CHECK( regs );
+
+    if (m3 > 3) 
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
 
     VR_SF(v1, m3) = i2;
 
@@ -2247,7 +2256,7 @@ DEF_INST( vector_find_element_not_equal )
         {
             if ((ind1 == max) && VR_UB(v2,i) != VR_UB(v3,i))
             {
-                match = (VR_UB(v2,i) < VR_UB(v3,i)) ? 1:2;
+                match = (VR_UB(v2,i) < VR_UB(v3,i)) ? 1 : 2;
                 ind1 = i;
             }
             if ((ind2 == max) && M5_ZS && VR_UB(v2, i) == 0) // if M5-ZS (Zero Search)
@@ -2484,7 +2493,7 @@ DEF_INST( vector_string_range_compare )
         for (i=0; i < max; i++) {
             result1[i] = 0;
             result2[i] = M6_ZS & (VR_UB(v2, i) == 0);
-            for (j=0; j < max; j+=2) {
+            for (j=0; j < max && !result1[i]; j+=2) {
                 lr = 0, rr = 0;
                 if ((VR_UB(v4, j)   & 0x80) && VR_UB(v2, i) == VR_UB(v3, j))   lr = 1;
                 if ((VR_UB(v4, j)   & 0x40) && VR_UB(v2, i) <  VR_UB(v3, j))   lr = 1;
@@ -2506,7 +2515,7 @@ DEF_INST( vector_string_range_compare )
         for (i=0; i < max; i++) {
             result1[i] = 0;
             result2[i] = M6_ZS & (VR_UH(v2, i) == 0);
-            for (j=0; j < max; j+=2) {
+            for (j=0; j < max && !result1[i]; j+=2) {
                 lr = 0, rr = 0;
                 if ((VR_UH(v4, j)   & 0x8000) && VR_UH(v2, i) == VR_UH(v3, j))   lr = 1;
                 if ((VR_UH(v4, j)   & 0x4000) && VR_UH(v2, i) <  VR_UH(v3, j))   lr = 1;
@@ -2528,7 +2537,7 @@ DEF_INST( vector_string_range_compare )
         for (i=0; i < max; i++) {
             result1[i] = 0;
             result2[i] = M6_ZS & (VR_UF(v2, i) == 0);
-            for (j=0; j < max; j+=2) {
+            for (j=0; j < max && !result1[i]; j+=2) {
                 lr = 0, rr = 0;
                 if ((VR_UF(v4, j)   & 0x8000) && VR_UF(v2, i) == VR_UF(v3, j))   lr = 1;
                 if ((VR_UF(v4, j)   & 0x4000) && VR_UF(v2, i) <  VR_UF(v3, j))   lr = 1;

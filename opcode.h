@@ -3677,6 +3677,18 @@ DEF_INST(vector_minimum);
 DEF_INST(vector_maximum);
 #endif
 
+#if defined( FEATURE_135_ZVECTOR_ENH_FACILITY_1 )
+DEF_INST(vector_not_exclusive_or);
+DEF_INST(vector_nand);
+DEF_INST(vector_or_with_complement);
+DEF_INST(vector_bit_permute);
+DEF_INST(vector_fp_negative_multiply_and_subtract);
+DEF_INST(vector_fp_negative_multiply_and_add);
+DEF_INST(vector_multiply_sum_logical);
+DEF_INST(vector_fp_minimum);
+DEF_INST(vector_fp_maximum);
+#endif
+
 #if defined( FEATURE_145_INS_REF_BITS_MULT_FACILITY )
 DEF_INST( insert_reference_bits_multiple );
 #endif

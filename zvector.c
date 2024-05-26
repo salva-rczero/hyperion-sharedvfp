@@ -5004,6 +5004,225 @@ DEF_INST( vector_maximum )
 
 #endif /* defined( FEATURE_129_ZVECTOR_FACILITY ) */
 
+#if defined( FEATURE_135_ZVECTOR_ENH_FACILITY_1 )
+
+/*-------------------------------------------------------------------*/
+/* E76C VNX    - Vector Not Exclusive OR                     [VRR-c] */
+/*-------------------------------------------------------------------*/
+DEF_INST(vector_not_exclusive_or)
+{
+    int     v1, v2, v3, v4, m5, m6;
+
+    VRR_C( inst, regs, v1, v2, v3, v4, m5, m6 );
+
+    UNREFERENCED(v4);              // Not used
+    UNREFERENCED(m5);              // Not used
+    UNREFERENCED(m6);              // Not used
+    
+    ZVECTOR_CHECK( regs );
+
+    VR_UD(v1, 1) = ~(VR_UD(v2, 1) ^ VR_UD(v3, 1));
+    VR_UD(v1, 0) = ~(VR_UD(v2, 0) ^ VR_UD(v3, 0));
+
+    ZVECTOR_END( regs );
+}
+
+/*-------------------------------------------------------------------*/
+/* E76E VNN    - Vector NAND                                 [VRR-c] */
+/*-------------------------------------------------------------------*/
+DEF_INST(vector_nand)
+{
+    int     v1, v2, v3, v4, m5, m6;
+
+    VRR_C( inst, regs, v1, v2, v3, v4, m5, m6 );
+
+    UNREFERENCED(v4);              // Not used
+    UNREFERENCED(m5);              // Not used
+    UNREFERENCED(m6);              // Not used
+    
+    ZVECTOR_CHECK( regs );
+
+    VR_UD(v1, 1) = ~(VR_UD(v2, 1) & VR_UD(v3, 1));
+    VR_UD(v1, 0) = ~(VR_UD(v2, 0) & VR_UD(v3, 0));
+
+    ZVECTOR_END( regs );
+}
+
+/*-------------------------------------------------------------------*/
+/* E76F VOC    - Vector OR with Complement                   [VRR-c] */
+/*-------------------------------------------------------------------*/
+DEF_INST(vector_or_with_complement)
+{
+    int     v1, v2, v3, v4, m5, m6;
+
+    VRR_C( inst, regs, v1, v2, v3, v4, m5, m6 );
+
+    UNREFERENCED(v4);              // Not used
+    UNREFERENCED(m5);              // Not used
+    UNREFERENCED(m6);              // Not used
+    
+    ZVECTOR_CHECK( regs );
+
+    VR_UD(v1, 1) = VR_UD(v2, 1) | ~VR_UD(v3, 1);
+    VR_UD(v1, 0) = VR_UD(v2, 0) | ~VR_UD(v3, 0);
+
+    ZVECTOR_END( regs );
+}
+
+/*-------------------------------------------------------------------*/
+/* E785 VBPERM - Vector Bit Permute                          [VRR-c] */
+/*-------------------------------------------------------------------*/
+DEF_INST(vector_bit_permute)
+{
+    int     v1, v2, v3, v4, m5, m6, i;
+    U8      bits[32];
+    U16     result = 0;
+    
+    VRR_C( inst, regs, v1, v2, v3, v4, m5, m6 );
+
+    UNREFERENCED(v4);              // Not used
+    UNREFERENCED(m5);              // Not used
+    UNREFERENCED(m6);              // Not used
+
+    ZVECTOR_CHECK( regs );
+
+    for (i = 0; i < 32; i++)
+        bits[i] = i < 16 ? VR_UB(v2, i) : 0x00;
+
+    for (i = 0; i < 16; i++) {
+        if (bits[VR_UB(v3, i) / 8] & 0x80 >> VR_UB(v3, i) % 8)
+            result = result | 0x8000 >> i;
+    }
+
+    VR_UD(v1, 0) = 0;
+    VR_UD(v1, 1) = 0;
+    VR_UH(v1, 3) = result;
+    
+    ZVECTOR_END( regs );
+}
+
+/*-------------------------------------------------------------------*/
+/* E79E VFNMS  - Vector FP Negative Multiply and Subtract    [VRR-e] */
+/*-------------------------------------------------------------------*/
+DEF_INST(vector_fp_negative_multiply_and_subtract)
+{
+    int     v1, v2, v3, v4, m5, m6;
+
+    VRR_E( inst, regs, v1, v2, v3, v4, m5, m6 );
+
+    ZVECTOR_CHECK( regs );
+    //
+    // TODO: insert code here
+    //
+    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
+    //
+    ZVECTOR_END( regs );
+
+}
+
+/*-------------------------------------------------------------------*/
+/* E79F VFNMA  - Vector FP Negative Multiply and Add         [VRR-e] */
+/*-------------------------------------------------------------------*/
+DEF_INST(vector_fp_negative_multiply_and_add)
+{
+    int     v1, v2, v3, v4, m5, m6;
+
+    VRR_E( inst, regs, v1, v2, v3, v4, m5, m6 );
+
+    ZVECTOR_CHECK( regs );
+    //
+    // TODO: insert code here
+    //
+    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
+    //
+    ZVECTOR_END( regs );
+
+}
+
+/*-------------------------------------------------------------------*/
+/* E7B8 VMSL   - Vector Multiply Sum Logical                 [VRR-d] */
+/*-------------------------------------------------------------------*/
+DEF_INST(vector_multiply_sum_logical)
+{
+    int     v1, v2, v3, v4, m5, m6;
+    U64     low, low1, low2, high, high1, high2;
+
+    VRR_D(inst, regs, v1, v2, v3, v4, m5, m6);
+
+    ZVECTOR_CHECK( regs );
+
+    switch (m5)
+    {
+    case 3:
+        low1 = _umul128(VR_UD(v2, 0), VR_UD(v3, 0), &high1);
+        if (m6 & 0x8) {
+            high1 = __shiftleft128(low1, high1, 1);
+            low1 <<= 1;
+        }
+        low2 = _umul128(VR_UD(v2, 1), VR_UD(v3, 1), &high2);
+        if (m6 & 0x4) {
+            high2 = __shiftleft128(low2, high2, 1);
+            low2 <<= 1;
+        }
+        high = high1 + high2;
+        low = low1 + low2;
+        if (low < low1)
+            high++;
+        high = high + VR_UD(v4, 0);
+        low = low + VR_UD(v4, 1);
+        if (low < VR_UD(v4, 1))
+            high++;
+        VR_UD(v1, 0) = high;
+        VR_UD(v1, 1) = low;
+        break;
+    default:
+        ARCH_DEP(program_interrupt) (regs, PGM_SPECIFICATION_EXCEPTION);
+        break;
+    }
+
+    ZVECTOR_END( regs );
+
+}
+
+/*-------------------------------------------------------------------*/
+/* E7EE VFMIN  - Vector FP Minimum                           [VRR-c] */
+/*-------------------------------------------------------------------*/
+DEF_INST(vector_fp_minimum)
+{
+    int     v1, v2, v3, v4, m5, m6;
+
+    VRR_C( inst, regs, v1, v2, v3, v4, m5, m6 );
+
+    ZVECTOR_CHECK( regs );
+    //
+    // TODO: insert code here
+    //
+    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
+    //
+    ZVECTOR_END( regs );
+}
+
+
+/*-------------------------------------------------------------------*/
+/* E7EF VFMAX  - Vector FP Maximum                           [VRR-c] */
+/*-------------------------------------------------------------------*/
+DEF_INST(vector_fp_maximum)
+{
+    int     v1, v2, v3, v4, m5, m6;
+
+    VRR_C( inst, regs, v1, v2, v3, v4, m5, m6 );
+
+    ZVECTOR_CHECK( regs );
+    //
+    // TODO: insert code here
+    //
+    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
+    //
+    ZVECTOR_END( regs );
+}
+
+#endif /* defined( FEATURE_135_ZVECTOR_ENH_FACILITY_1 ) */
+
 #if !defined( _GEN_ARCH )
 
   #if defined(              _ARCH_NUM_1 )

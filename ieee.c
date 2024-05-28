@@ -2,6 +2,7 @@
 /*              (C) Copyright Willem Konynenberg, 2001-2003          */
 /*              (C) Copyright "Fish" (David B. Trout), 2011          */
 /*              (C) Copyright Stephen R. Orso, 2016                  */
+/*              (C) and others 2024                                  */
 /*              Hercules Binary (IEEE) Floating Point Instructions   */
 /*                                                                   */
 /*   Released under "The Q Public License Version 1"                 */
@@ -36,6 +37,9 @@
  *  FEATURE_037_FP_EXTENSION_FACILITY.  All changes are based
  *  on the -10 edition of the z/Architecture Principles of Operation,
  *  SA22-7832.
+ * Spring 2024: z/Architecture Vector Floating-Point Instructions
+ *  added based on the -13 edition of the z/Architecture
+ *  Principles of Operation, SA22-7832.
  */
 /*--------------------------------------------------------------------------*/
 /* Modifications to the Softfloat interface enable use of a separately-     */
@@ -280,10 +284,27 @@ const BYTE map_valid_m3_values_NOFPX[8] =
                                   _op1.v               & 0x80000000             \
                                                        ? 1 : 2
 
+// Data with DXC 08, IEEE inexact and truncated
+// Data with DXC 0B, Simulated IEEE inexact
+// Data with DXC 0C, IEEE inexact and incremented
+// Data with DXC 10, IEEE underflow, exact
+// Data with DXC 13, Simulated IEEE underflow, exact
+// Data with DXC 18, IEEE underflow, inexact and truncated
+// Data with DXC 1B, Simulated IEEE underflow, inexact
+// Data with DXC 1C, IEEE underflow, inexact and incremented
+// Data with DXC 20, IEEE overflow, exact
+// Data with DXC 23, Simulated IEEE overflow, exact
+// Data with DXC 28, IEEE overflow, inexact and truncated
+// Data with DXC 2B, Simulated IEEE overflow, inexact
+// Data with DXC 2C, IEEE overflow, inexact and incremented
+// Data with DXC 40, IEEE division by zero
+// Data with DXC 43, Simulated IEEE division by zero
+// Data with DXC 80, IEEE invalid operation
+// Data with DXC 83, Simulated IEEE invalid operation
 static void ieee_trap( REGS *regs, BYTE dxc)
 {
     regs->dxc = dxc;                   /*  Save DXC in PSA         */
-    regs->fpc &= ~FPC_DXC;             /*  Clear any previous DXC  */
+    regs->fpc &= ~FPC_DXC;             /*  Clear previous DXC/VXC  */
     regs->fpc |= ((U32)dxc << FPC_DXC_SHIFT);
     regs->program_interrupt( regs, PGM_DATA_EXCEPTION );
 }
@@ -409,7 +430,7 @@ static INLINE U32 float32_class( float32_t op )
     /* ..and suppress those that could trap */                          \
     ~(regs->fpc >> 8) & FPC_FLAGS;
 
-/* Save detected exceptions that are trap-enabled                   */
+/* Save detected exceptions that are trap-enabled                      */
 
 #define IEEE_EXCEPTION_TEST_TRAPS( _regs, _ieee_trap_conds, _exceptions )   \
                                                                             \
@@ -425,37 +446,37 @@ static INLINE U32 float32_class( float32_t op )
 /* Translate M3 or M4 rounding mode into matching Softfloat rounding
    mode. Use FPC rounding mode if M3 or M4 is zero.
 */
-#define SET_SF_RM_FROM_MASK( _mask )                                    \
-                                                                        \
-    softfloat_roundingMode = _mask ?                                    \
-        map_m3_to_sf_rm[_mask]                                          \
+#define SET_SF_RM_FROM_MASK( _mask )                                 \
+                                                                     \
+    softfloat_roundingMode = _mask ?                                 \
+        map_m3_to_sf_rm[_mask]                                       \
       : map_fpc_brm_to_sf_rm[ (regs->fpc & FPC_BRM_3BIT) ]
 
 
 /* fastpath test for Xi trap; many instructions only return Xi */
-#define IEEE_EXCEPTION_TRAP_XI( _regs )                                 \
-                                                                        \
-    if (1                                                               \
-        && (softfloat_exceptionFlags & softfloat_flag_invalid)          \
-        && (_regs->fpc & FPC_MASK_IMI)                                  \
-    )                                                                   \
+#define IEEE_EXCEPTION_TRAP_XI( _regs )                              \
+                                                                     \
+    if (1                                                            \
+        && (softfloat_exceptionFlags & softfloat_flag_invalid)       \
+        && (_regs->fpc & FPC_MASK_IMI)                               \
+    )                                                                \
         ieee_trap( _regs, DXC_IEEE_INVALID_OP )
 
 
 /* fastpath test for Xz trap; only Divide returns Xz  */
-#define IEEE_EXCEPTION_TRAP_XZ( _regs )                                 \
-                                                                        \
-    if (1                                                               \
-        && (softfloat_exceptionFlags & softfloat_flag_infinite)         \
-        && (_regs->fpc & FPC_MASK_IMZ)                                  \
-    )                                                                   \
+#define IEEE_EXCEPTION_TRAP_XZ( _regs )                              \
+                                                                     \
+    if (1                                                            \
+        && (softfloat_exceptionFlags & softfloat_flag_infinite)      \
+        && (_regs->fpc & FPC_MASK_IMZ)                               \
+    )                                                                \
         ieee_trap( _regs, DXC_IEEE_DIV_ZERO )
 
 
 /* trap if any provided exception has been previously detected */
-#define IEEE_EXCEPTION_TRAP( _regs, _ieee_trap_conds, _exceptions )     \
-                                                                        \
-    if (_ieee_trap_conds & (_exceptions))                               \
+#define IEEE_EXCEPTION_TRAP( _regs, _ieee_trap_conds, _exceptions )  \
+                                                                     \
+    if (_ieee_trap_conds & (_exceptions))                            \
         ieee_cond_trap( _regs, _ieee_trap_conds)
 
 
@@ -539,7 +560,7 @@ static INLINE void ARCH_DEP( BFP_RM_check )( REGS* regs, BYTE mask )
             regs->program_interrupt( regs, PGM_SPECIFICATION_EXCEPTION );
     }
     else
-#endif
+#endif /* defined FEATURE_037_FP_EXTENSION_FACILITY */
     {
         if (mask > 7 || !map_valid_m3_values_NOFPX[ (mask & 0x7) ])
             regs->program_interrupt( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -549,36 +570,36 @@ static INLINE void ARCH_DEP( BFP_RM_check )( REGS* regs, BYTE mask )
 #undef  BFPRM_CHECK
 #define BFPRM_CHECK( _mask, _regs )   ARCH_DEP( BFP_RM_check )((_regs),(_mask))
 
-static INLINE void ARCH_DEP( get_float128 )( float128_t *op, U64 *fpr1, U64 *fpr2 )
+static INLINE void ARCH_DEP( get_float128 )( float128_t *op, U64 *fh, U64 *fl )
 {
-    op->v[FLOAT128_HI] = *fpr1;
-    op->v[FLOAT128_LO] = *fpr2;
+    op->v[FLOAT128_HI] = *fh;
+    op->v[FLOAT128_LO] = *fl;
 }
 
-static INLINE void ARCH_DEP( put_float128 )( float128_t *op, U64 *fpr1, U64 *fpr2 )
+static INLINE void ARCH_DEP( put_float128 )( float128_t *op, U64 *fh, U64 *fl )
 {
-    *fpr1 = op->v[FLOAT128_HI];
-    *fpr2 = op->v[FLOAT128_LO];
+    *fh = op->v[FLOAT128_HI];
+    *fl = op->v[FLOAT128_LO];
 }
 
-static INLINE void ARCH_DEP( get_float64 )( float64_t *op, U64 *fpr )
+static INLINE void ARCH_DEP( get_float64 )( float64_t *op, U64 *f )
 {
-    op->v = *fpr;
+    op->v = *f;
 }
 
-static INLINE void ARCH_DEP( put_float64 )( float64_t *op, U64 *fpr )
+static INLINE void ARCH_DEP( put_float64 )( float64_t *op, U64 *f )
 {
-    *fpr = op->v;
+    *f = op->v;
 }
 
-static INLINE void ARCH_DEP( get_float32 )( float32_t *op, U32 *fpr )
+static INLINE void ARCH_DEP( get_float32 )( float32_t *op, U32 *f )
 {
-    op->v = *fpr;
+    op->v = *f;
 }
 
-static INLINE void ARCH_DEP( put_float32 )( float32_t *op, U32 *fpr )
+static INLINE void ARCH_DEP( put_float32 )( float32_t *op, U32 *f )
 {
-    *fpr = op->v;
+    *f = op->v;
 }
 
 #undef VFETCH_FLOAT64_OP
@@ -709,35 +730,35 @@ static INLINE BYTE ARCH_DEP( float32_signaling_compare )( float32_t op1, float32
 #undef PUT_FLOAT64_NOCC
 #undef PUT_FLOAT32_NOCC
 
-#define PUT_FLOAT128_NOCC( op1, r1, regs )  ARCH_DEP( put_float128 )( &op1, &regs->FPR_L( r1 ), &regs->FPR_L( r1+2 ));
-#define PUT_FLOAT64_NOCC(  op1, r1, regs )  ARCH_DEP( put_float64  )( &op1, &regs->FPR_L( r1 ))
-#define PUT_FLOAT32_NOCC(  op1, r1, regs )  ARCH_DEP( put_float32  )( &op1, &regs->FPR_S( r1 ))
+#define PUT_FLOAT128_NOCC( op, r, regs )  ARCH_DEP( put_float128 )( &op, &regs->FPR_L( r ), &regs->FPR_L( r+2 ))
+#define PUT_FLOAT64_NOCC(  op, r, regs )  ARCH_DEP( put_float64  )( &op, &regs->FPR_L( r ))
+#define PUT_FLOAT32_NOCC(  op, r, regs )  ARCH_DEP( put_float32  )( &op, &regs->FPR_S( r ))
 
 #undef PUT_FLOAT128_CC
 #undef PUT_FLOAT64_CC
 #undef PUT_FLOAT32_CC
 
-#define PUT_FLOAT128_CC( op1, r1, regs )                                            \
-                                                                                    \
-    do {                                                                            \
-        ARCH_DEP( put_float128 )( &op1, &regs->FPR_L( r1 ), &regs->FPR_L( r1+2 ));  \
-        regs->psw.cc = FLOAT128_CC( op1 );                                          \
+#define PUT_FLOAT128_CC( op, r, regs )                                           \
+                                                                                 \
+    do {                                                                         \
+        ARCH_DEP( put_float128 )( &op, &regs->FPR_L( r ), &regs->FPR_L( r+2 ));  \
+        regs->psw.cc = FLOAT128_CC( op );                                        \
     } while (0)
 
 
-#define PUT_FLOAT64_CC( op1, r1, regs )                             \
-                                                                    \
-    do {                                                            \
-        ARCH_DEP( put_float64 )( &op1, &regs->FPR_L( r1 ));         \
-        regs->psw.cc = FLOAT64_CC( op1 );                           \
+#define PUT_FLOAT64_CC( op, r, regs )                      \
+                                                           \
+    do {                                                   \
+        ARCH_DEP( put_float64 )( &op, &regs->FPR_L( r ));  \
+        regs->psw.cc = FLOAT64_CC( op );                   \
     } while (0)
 
 
-#define PUT_FLOAT32_CC( op1, r1, regs )                             \
-                                                                    \
-    do {                                                            \
-        ARCH_DEP( put_float32 )( &op1, &regs->FPR_S( r1 ));         \
-        regs->psw.cc = FLOAT32_CC( op1 );                           \
+#define PUT_FLOAT32_CC( op, r, regs )                      \
+                                                           \
+    do {                                                   \
+        ARCH_DEP( put_float32 )( &op, &regs->FPR_S( r ));  \
+        regs->psw.cc = FLOAT32_CC( op );                   \
     } while (0)
 
 
@@ -759,7 +780,7 @@ enum
     FP_SUBNORMAL    =  3,
     FP_NORMAL       =  4
 };
-#endif /*!defined( HAVE_MATH_H ) */
+#endif /*!defined( HAVE_MATH_H ) && (_MSC_VER < VS2015) */
 
 /*
  * Classify emulated fp values
@@ -847,6 +868,1594 @@ static void put_sbfp( struct sbfp* op, U32* fpr )
 }
 
 #endif /* !defined( _IEEE_NONARCHDEP_ ) */
+
+#if defined( FEATURE_129_ZVECTOR_FACILITY )
+
+/*===========================================================================*/
+/*  Start of z/Arch Vector Floating Point instructions                       */
+/*===========================================================================*/
+
+/*
+ * z/Architecture Principles of Operation (SA22-7832-10 onwards)
+ * Chapter 24. Vector Floating-Point Instructions
+ */
+
+// Vector processing with VXC for IEEE exception and element index
+static void vector_ieee_trap( REGS *regs, BYTE vxc)
+{
+    regs->dxc = vxc;                   /*  Save VXC in PSA         */
+    regs->fpc &= ~FPC_DXC;             /*  Clear previous DXC/VXC  */
+    regs->fpc |= ((U32)vxc << FPC_DXC_SHIFT);
+    regs->program_interrupt( regs, PGM_VECTOR_PROCESSING_EXCEPTION );
+}
+
+static void vector_ieee_cond_trap( int vix, REGS *regs, U32 ieee_traps )
+{
+    if (ieee_traps & FPC_MASK_IMI)
+        vector_ieee_trap( regs, ((vix << VXC_VIX_SHIFT) | VXC_IEEE_INVALID_OP) );
+
+    else if (ieee_traps & FPC_MASK_IMZ)
+        vector_ieee_trap( regs, ((vix << VXC_VIX_SHIFT) | VXC_IEEE_DIV_ZERO) );
+
+    else if (ieee_traps & FPC_MASK_IMO)
+        vector_ieee_trap( regs, ((vix << VXC_VIX_SHIFT) | VXC_IEEE_OVERFLOW) );
+
+    else if (ieee_traps & FPC_MASK_IMU)
+        vector_ieee_trap( regs, ((vix << VXC_VIX_SHIFT) | VXC_IEEE_UNDERFLOW) );
+
+    else if (ieee_traps & FPC_MASK_IMX)
+        vector_ieee_trap( regs, ((vix << VXC_VIX_SHIFT) | VXC_IEEE_INEXACT) );
+}
+
+/* fastpath test for Xi trap; many instructions only return Xi */
+#define VECTOR_IEEE_EXCEPTION_TRAP_XI( _vix, _regs )                 \
+                                                                     \
+    if (1                                                            \
+        && (softfloat_exceptionFlags & softfloat_flag_invalid)       \
+        && (_regs->fpc & FPC_MASK_IMI)                               \
+    )                                                                \
+        vector_ieee_trap( _regs, VXC_IEEE_INVALID_OP )
+
+/* fastpath test for Xz trap; only Divide returns Xz  */
+#define VECTOR_IEEE_EXCEPTION_TRAP_XZ( _vix, _regs )                 \
+                                                                     \
+    if (1                                                            \
+        && (softfloat_exceptionFlags & softfloat_flag_infinite)      \
+        && (_regs->fpc & FPC_MASK_IMZ)                               \
+    )                                                                \
+        vector_ieee_trap( _regs, VXC_IEEE_DIV_ZERO )
+
+/* trap if any provided exception has been previously detected */
+#define VECTOR_IEEE_EXCEPTION_TRAP( _vix, _regs, _ieee_trap_conds, _exceptions )  \
+                                                                                  \
+    if (_ieee_trap_conds & (_exceptions))                                         \
+        vector_ieee_cond_trap( _vix, _regs, _ieee_trap_conds)
+
+#undef VECTOR_GET_FLOAT128_OP
+#undef VECTOR_GET_FLOAT64_OP
+#undef VECTOR_GET_FLOAT32_OP
+
+#define VECTOR_GET_FLOAT128_OP( op, v, i, regs )  ARCH_DEP( get_float128 )( &op, &regs->VR_D( v, 0 ), &regs->VR_D( v , 1))
+#define VECTOR_GET_FLOAT64_OP(  op, v, i, regs )  ARCH_DEP( get_float64  )( &op, &regs->VR_D( v, i ))
+#define VECTOR_GET_FLOAT32_OP(  op, v, i, regs )  ARCH_DEP( get_float32  )( &op, &regs->VR_F( v, i ))
+
+#undef VECTOR_PUT_FLOAT128_NOCC
+#undef VECTOR_PUT_FLOAT64_NOCC
+#undef VECTOR_PUT_FLOAT32_NOCC
+
+#define VECTOR_PUT_FLOAT128_NOCC( op, v, i, regs )  ARCH_DEP( put_float128 )( &op, &regs->VR_D( v, 0 ), &regs->VR_D( v , 1))
+#define VECTOR_PUT_FLOAT64_NOCC(  op, v, i, regs )  ARCH_DEP( put_float64  )( &op, &regs->VR_D( v, i ))
+#define VECTOR_PUT_FLOAT32_NOCC(  op, v, i, regs )  ARCH_DEP( put_float32  )( &op, &regs->VR_F( v, i ))
+
+#define VECTOR_RESERVED_BITS( _bits, _reserved )                             \
+                                                                             \
+    if ( _bits & _reserved )                                                 \
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+
+
+/*-------------------------------------------------------------------*/
+/* E74A VFTCI  - Vector FP Test Data Class Immediate         [VRI-e] */
+/*-------------------------------------------------------------------*/
+DEF_INST( vector_fp_test_data_class_immediate )
+{
+    int     v1, v2, i3, m4, m5;
+    int     i;
+    int     single_element;
+    int     one_bit_found, zero_bit_found;
+    U32     op2_dataclass;
+
+    VRI_E( inst, regs, v1, v2, i3, m4, m5 );
+
+    ZVECTOR_CHECK( regs );
+
+    VECTOR_RESERVED_BITS( m5, 0x07 );
+
+    single_element = (m5 & 0x8);
+
+    one_bit_found = zero_bit_found = FALSE;
+
+    if (m4 == 3)  /* Long format */
+    {
+        float64_t   op2;
+
+        for (i=0; i < 2; i+=2)
+        {
+            if (i == 0 || !single_element)
+            {
+                VECTOR_GET_FLOAT64_OP(  op2, v2, i, regs );
+                op2_dataclass = float64_class( op2 );
+                softfloat_exceptionFlags = 0;
+                if (op2_dataclass & i3)
+                {
+                    one_bit_found = TRUE;
+                    regs->VR_D( v1, i ) = 0xFFFFFFFFFFFFFFFFULL;
+                }
+                else
+                {
+                    zero_bit_found = TRUE;
+                    regs->VR_D( v1, i ) = 0x0000000000000000ULL;
+                }
+            }
+        }
+    }
+#if defined( FEATURE_135_ZVECTOR_ENH_FACILITY_1 )
+    else if (m4 == 2)  /* Short format */
+    {
+        float32_t   op2;
+
+        for (i=0; i < 4; i++)
+        {
+            if (i == 0 || !single_element)
+            {
+                VECTOR_GET_FLOAT32_OP(  op2, v2, i, regs );
+                op2_dataclass = float32_class( op2 );
+                softfloat_exceptionFlags = 0;
+                if (op2_dataclass & i3)
+                {
+                    one_bit_found = TRUE;
+                    regs->VR_F( v1, i ) = 0xFFFFFFFF;
+                }
+                else
+                {
+                    zero_bit_found = TRUE;
+                    regs->VR_F( v1, i ) = 0x00000000;
+                }
+            }
+        }
+    }
+    else if (m4 == 4)  /* Extended format */
+    {
+        float128_t  op2;
+
+        VECTOR_GET_FLOAT128_OP( op2, v2, 0, regs );
+        op2_dataclass = float128_class( op2 );
+        softfloat_exceptionFlags = 0;
+        if (op2_dataclass & i3)
+        {
+            one_bit_found = TRUE;
+            regs->VR_D( v1, 0 ) = 0xFFFFFFFFFFFFFFFFULL;
+            regs->VR_D( v1, 1 ) = 0xFFFFFFFFFFFFFFFFULL;
+        }
+        else
+        {
+            zero_bit_found = TRUE;
+            regs->VR_D( v1, 0 ) = 0x0000000000000000ULL;
+            regs->VR_D( v1, 1 ) = 0x0000000000000000ULL;
+        }
+    }
+#endif /* defined( FEATURE_135_ZVECTOR_ENH_FACILITY_1 ) */
+    else
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+
+    if (one_bit_found == TRUE && zero_bit_found == TRUE)
+        regs->psw.cc = 1;
+    else if (one_bit_found == FALSE && zero_bit_found == TRUE)
+        regs->psw.cc = 3;
+    else
+        regs->psw.cc = 0;
+
+    ZVECTOR_END( regs );
+}
+
+/*-------------------------------------------------------------------*/
+/* E78E VFMS   - Vector FP Multiply and Subtract             [VRR-e] */
+/*-------------------------------------------------------------------*/
+DEF_INST( vector_fp_multiply_and_subtract )
+{
+    int     v1, v2, v3, v4, m5, m6;
+
+    VRR_E( inst, regs, v1, v2, v3, v4, m5, m6 );
+
+    ZVECTOR_CHECK( regs );
+    //
+    // TODO: insert code here
+    //
+    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
+    //
+    ZVECTOR_END( regs );
+}
+
+/*-------------------------------------------------------------------*/
+/* E78F VFMA   - Vector FP Multiply and Add                  [VRR-e] */
+/*-------------------------------------------------------------------*/
+DEF_INST( vector_fp_multiply_and_add )
+{
+    int     v1, v2, v3, v4, m5, m6;
+
+    VRR_E( inst, regs, v1, v2, v3, v4, m5, m6 );
+
+    ZVECTOR_CHECK( regs );
+    //
+    // TODO: insert code here
+    //
+    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
+    //
+    ZVECTOR_END( regs );
+}
+
+/*-------------------------------------------------------------------*/
+/* E79E VFNMS  - Vector FP Negative Multiply And Subtract    [VRR-e] */
+/*-------------------------------------------------------------------*/
+DEF_INST( vector_fp_negative_multiply_and_subtract )
+{
+    int     v1, v2, v3, v4, m5, m6;
+
+    VRR_E( inst, regs, v1, v2, v3, v4, m5, m6 );
+
+    ZVECTOR_CHECK( regs );
+    //
+    // TODO: insert code here
+    //
+    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
+    //
+    ZVECTOR_END( regs );
+}
+
+/*-------------------------------------------------------------------*/
+/* E79F VFNMA  - Vector FP Negative Multiply And Add         [VRR-e] */
+/*-------------------------------------------------------------------*/
+DEF_INST( vector_fp_negative_multiply_and_add )
+{
+    int     v1, v2, v3, v4, m5, m6;
+
+    VRR_E( inst, regs, v1, v2, v3, v4, m5, m6 );
+
+    ZVECTOR_CHECK( regs );
+    //
+    // TODO: insert code here
+    //
+    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
+    //
+    ZVECTOR_END( regs );
+}
+
+/*----------------------------------------------------------------------*/
+/* E7C0 VCLFP  - Vector FP Convert To Logical (short BFP to 32) [VRR-a] */
+/* E7C0 VCLGD  - Vector FP Convert To Logical (long BFP to 64)  [VRR-a] */
+/*----------------------------------------------------------------------*/
+DEF_INST( vector_fp_convert_to_logical )
+{
+    int     v1, v2, m3, m4, m5;
+    int     i;
+    int     single_element;
+    U32     ieee_trap_conds = 0;
+    BYTE    newcc;
+
+    VRR_A( inst, regs, v1, v2, m3, m4, m5 );
+
+    ZVECTOR_CHECK( regs );
+
+    BFPRM_CHECK( m5 ,regs );
+
+    VECTOR_RESERVED_BITS( m4, 0x03 );
+
+    single_element = (m4 & 0x8);
+
+    if (m3 == 3)  /* BFP long format to doubleword */
+    {
+        U64         op1;
+        float64_t   op2;
+
+        for (i=0; i < 2; i++)
+        {
+            if (i == 0 || !single_element)
+            {
+                SET_SF_RM_FROM_MASK( m5 );
+
+                VECTOR_GET_FLOAT64_OP(  op2, v2, i, regs );
+                softfloat_exceptionFlags = 0;
+
+                if (FLOAT64_ISNAN( op2 ))
+                {
+                    op1 = 0;
+                    softfloat_raiseFlags( softfloat_flag_invalid );
+                }
+                else
+                {
+                    SET_SF_RM_FROM_MASK( m3 );
+                    op1 = f64_to_ui64( op2, softfloat_roundingMode, !SUPPRESS_INEXACT( m4 ));
+                }
+
+                VECTOR_IEEE_EXCEPTION_TRAP_XI( i, regs );
+
+                if (softfloat_exceptionFlags & softfloat_flag_invalid)
+                {
+                    newcc = 3;
+
+                    if (!SUPPRESS_INEXACT( m4 ))
+                        softfloat_exceptionFlags |= softfloat_flag_inexact;
+                }
+                else
+                    newcc = FLOAT64_CC( op2 );
+
+                regs->VR_D( v1, i ) = op1;
+                regs->psw.cc = newcc;
+
+                ieee_trap_conds = ieee_exception_test_oux( regs );
+                VECTOR_IEEE_EXCEPTION_TRAP( i, regs, ieee_trap_conds, FPC_MASK_IMX );
+            }
+        }
+    }
+#if defined( FEATURE_148_ZVECTOR_ENH_FACILITY_2 )
+    else if (m3 == 2)  /* BFP short format to word */
+    {
+        U32         op1;
+        float32_t   op2;
+
+        for (i=0; i < 4; i++)
+        {
+            if (i == 0 || !single_element)
+            {
+                SET_SF_RM_FROM_MASK( m5 );
+
+                VECTOR_GET_FLOAT32_OP(  op2, v2, i, regs );
+                softfloat_exceptionFlags = 0;
+
+                if (FLOAT32_ISNAN( op2 ))
+                {
+                    op1 = 0;
+                    softfloat_raiseFlags( softfloat_flag_invalid );
+                }
+                else
+                {
+                    SET_SF_RM_FROM_MASK( m3 );
+                    op1 = f32_to_ui32( op2, softfloat_roundingMode, !SUPPRESS_INEXACT( m4 ));
+                }
+
+                VECTOR_IEEE_EXCEPTION_TRAP_XI( i, regs );
+
+                if (softfloat_exceptionFlags & softfloat_flag_invalid)
+                {
+                    newcc = 3;
+
+                    if (!SUPPRESS_INEXACT( m4 ))
+                        softfloat_exceptionFlags |= softfloat_flag_inexact;
+                }
+                else
+                    newcc = FLOAT32_CC( op2 );
+
+                regs->VR_F( v1, i ) = op1;
+                regs->psw.cc = newcc;
+
+                ieee_trap_conds = ieee_exception_test_oux( regs );
+                VECTOR_IEEE_EXCEPTION_TRAP( i, regs, ieee_trap_conds, FPC_MASK_IMX );
+            }
+        }
+    }
+#endif /* defined( FEATURE_148_ZVECTOR_ENH_FACILITY_2 ) */
+    else
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+
+    ZVECTOR_END( regs );
+}
+
+/*------------------------------------------------------------------------*/
+/* E7C1 VCFPL  - Vector FP Convert From Logical (32 to short BFP) [VRR-a] */
+/* E7C1 VCDLG  - Vector FP Convert From Logical (64 to long BFP)  [VRR-a] */
+/*------------------------------------------------------------------------*/
+DEF_INST( vector_fp_convert_from_logical )
+{
+    int     v1, v2, m3, m4, m5;
+    int     i;
+    int     single_element;
+    U32     ieee_trap_conds = 0;
+
+    VRR_A( inst, regs, v1, v2, m3, m4, m5 );
+
+    ZVECTOR_CHECK( regs );
+
+    BFPRM_CHECK( m5 ,regs );
+
+    VECTOR_RESERVED_BITS( m4, 0x03 );
+
+    single_element = (m4 & 0x8);
+
+    if (m3 == 3)  /* Doubleword to BFP long format */
+    {
+        float64_t  op1;
+        U64        op2;
+
+        for (i=0; i < 2; i++)
+        {
+            if (i == 0 || !single_element)
+            {
+                SET_SF_RM_FROM_MASK( m5 );
+
+                op2 = regs->VR_D(  v2, i );
+                softfloat_exceptionFlags = 0;
+
+                op1 = ui64_to_f64( op2 );
+
+                VECTOR_PUT_FLOAT64_NOCC(  op1, v1, i, regs );
+
+                if (softfloat_exceptionFlags && !SUPPRESS_INEXACT( m4 ))
+                {
+                    ieee_trap_conds = ieee_exception_test_oux( regs );
+                    VECTOR_IEEE_EXCEPTION_TRAP( i, regs, ieee_trap_conds, FPC_MASK_IMX );
+                }
+            }
+        }
+    }
+#if defined( FEATURE_148_ZVECTOR_ENH_FACILITY_2 )
+    else if (m3 == 2)  /* Word to BFP short format */
+    {
+        float32_t  op1;
+        U32        op2;
+
+        for (i=0; i < 4; i++)
+        {
+            if (i == 0 || !single_element)
+            {
+                SET_SF_RM_FROM_MASK( m5 );
+
+                op2 = regs->VR_F(  v2, i );
+                softfloat_exceptionFlags = 0;
+
+                op1 = ui32_to_f32( op2 );
+
+                VECTOR_PUT_FLOAT32_NOCC(  op1, v1, i, regs );
+
+                if (softfloat_exceptionFlags && !SUPPRESS_INEXACT( m4 ))
+                {
+                    ieee_trap_conds = ieee_exception_test_oux( regs );
+                    VECTOR_IEEE_EXCEPTION_TRAP( i, regs, ieee_trap_conds, FPC_MASK_IMX );
+                }
+            }
+        }
+    }
+#endif /* defined( FEATURE_148_ZVECTOR_ENH_FACILITY_2 ) */
+    else
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+
+    ZVECTOR_END( regs );
+}
+
+/*--------------------------------------------------------------------*/
+/* E7C2 VCSFP  - Vector FP Convert To Fixed (short BFP to 32) [VRR-a] */
+/* E7C2 VCGD   - Vector FP Convert To Fixed (long BFP to 64)  [VRR-a] */
+/*--------------------------------------------------------------------*/
+DEF_INST( vector_fp_convert_to_fixed )
+{
+    int     v1, v2, m3, m4, m5;
+    int     i;
+    int     single_element;
+    U32     ieee_trap_conds = 0;
+    U32     op2_dataclass;
+    BYTE    newcc;
+
+    VRR_A( inst, regs, v1, v2, m3, m4, m5 );
+
+    ZVECTOR_CHECK( regs );
+
+    BFPRM_CHECK( m5 ,regs );
+
+    VECTOR_RESERVED_BITS( m4, 0x03 );
+
+    single_element = (m4 & 0x8);
+
+    if (m3 == 3)  /* BFP long format to doubleword */
+    {
+        S64         op1;
+        float64_t   op2;
+
+        for (i=0; i < 2; i++)
+        {
+            if (i == 0 || !single_element)
+            {
+                VECTOR_GET_FLOAT64_OP(  op2, v2, i, regs );
+                op2_dataclass = float64_class( op2 );
+                softfloat_exceptionFlags = 0;
+
+                if (op2_dataclass & (float_class_neg_signaling_nan |
+                                     float_class_pos_signaling_nan |
+                                     float_class_neg_quiet_nan     |
+                                     float_class_pos_quiet_nan ))
+                {
+                    /* NaN input always returns maximum negative integer,
+                       cc3, and IEEE invalid exception */
+                    op1 = -(0x7FFFFFFFFFFFFFFFULL) - 1;
+                    newcc = 3;
+                    softfloat_raiseFlags( softfloat_flag_invalid );
+                }
+                else if (op2_dataclass & (float_class_neg_zero | float_class_pos_zero))
+                {
+                    newcc = 0;
+                    op1 = 0;
+                }
+                else
+                {
+                    newcc = (op2.v & 0x8000000000000000ULL) ? 1 : 2;
+
+                    if (op2_dataclass & (float_class_neg_subnormal | float_class_pos_subnormal))
+                        op1 = 0;
+                    else
+                    {
+                        SET_SF_RM_FROM_MASK( m5 );
+                        op1 = f64_to_i64( op2, softfloat_roundingMode, !SUPPRESS_INEXACT( m4 ));
+                    }
+                }
+
+                VECTOR_IEEE_EXCEPTION_TRAP_XI( i, regs );
+
+                if (softfloat_exceptionFlags & softfloat_flag_invalid)
+                {
+                    newcc = 3;
+
+                    if (!SUPPRESS_INEXACT( m4 ))
+                        softfloat_exceptionFlags |= softfloat_flag_inexact;
+                }
+
+                regs->VR_D( v1, i ) = op1;
+                regs->psw.cc = newcc;
+
+                ieee_trap_conds = ieee_exception_test_oux( regs );
+                VECTOR_IEEE_EXCEPTION_TRAP( i, regs, ieee_trap_conds, FPC_MASK_IMX );
+            }
+        }
+    }
+#if defined( FEATURE_148_ZVECTOR_ENH_FACILITY_2 )
+    else if (m3 == 2)  /* BFP short format to word */
+    {
+        S32         op1;
+        float32_t   op2;
+
+        for (i=0; i < 4; i++)
+        {
+            if (i == 0 || !single_element)
+            {
+                VECTOR_GET_FLOAT32_OP(  op2, v2, i, regs );
+                op2_dataclass = float32_class( op2 );
+                softfloat_exceptionFlags = 0;
+
+                if (op2_dataclass & (float_class_neg_signaling_nan |
+                                     float_class_pos_signaling_nan |
+                                     float_class_neg_quiet_nan     |
+                                     float_class_pos_quiet_nan ))
+                {
+                    /* NaN input always returns maximum negative integer,
+                       cc3, and IEEE invalid exception */
+                    op1 = -0x7FFFFFFF - 1;
+                    newcc = 3;
+                    softfloat_raiseFlags( softfloat_flag_invalid );
+                }
+                else if (op2_dataclass & (float_class_neg_zero | float_class_pos_zero))
+                {
+                    newcc = 0;
+                    op1 = 0;
+                }
+                else
+                {
+                    newcc = (op2.v & 0x80000000) ? 1 : 2;
+                    if (op2_dataclass & (float_class_neg_subnormal | float_class_pos_subnormal))
+                        op1 = 0;
+                    else
+                    {
+                        SET_SF_RM_FROM_MASK( m3 );
+                        op1 = f32_to_i32( op2, softfloat_roundingMode, !SUPPRESS_INEXACT( m4 ));
+                    }
+                }
+
+                VECTOR_IEEE_EXCEPTION_TRAP_XI( i, regs );
+
+                if (softfloat_exceptionFlags & softfloat_flag_invalid)
+                {
+                    newcc = 3;
+
+                    if (!SUPPRESS_INEXACT( m4 ))
+                        softfloat_exceptionFlags |= softfloat_flag_inexact;
+                }
+
+                VECTOR_PUT_FLOAT32_NOCC(  op1, v1, i, regs );
+                regs->psw.cc = newcc;
+
+                ieee_trap_conds = ieee_exception_test_oux( regs );
+                VECTOR_IEEE_EXCEPTION_TRAP( i, regs, ieee_trap_conds, FPC_MASK_IMX );
+            }
+        }
+    }
+#endif /* defined( FEATURE_148_ZVECTOR_ENH_FACILITY_2 ) */
+    else
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+
+    ZVECTOR_END( regs );
+}
+
+/*----------------------------------------------------------------------*/
+/* E7C3 VCFPS  - Vector FP Convert From Fixed (32 to short BFP) [VRR-a] */
+/* E7C3 VCDG   - Vector FP Convert From Fixed (64 to long BFP)  [VRR-a] */
+/*----------------------------------------------------------------------*/
+DEF_INST( vector_fp_convert_from_fixed )
+{
+    int     v1, v2, m3, m4, m5;
+    int     i;
+    int     single_element;
+    int     ieee_trap_conds = 0;
+
+    VRR_A( inst, regs, v1, v2, m3, m4, m5 );
+
+    ZVECTOR_CHECK( regs );
+
+    BFPRM_CHECK( m5 ,regs );
+
+    VECTOR_RESERVED_BITS( m4, 0x03 );
+
+    single_element = (m4 & 0x8);
+
+    if (m3 == 3)  /* Doubleword to BFP long format */
+    {
+        /* Fixed 64-bit may not fit in the 52+1 bits available in a  */
+        /* long BFP, IEEE Inexact exceptions are possible. If m4     */
+        /* Inexact suppression control (XxC) is on, then no Inexact  */
+        /* exceptions recognized (no trap nor flag set).             */
+        float64_t   op1;
+        S64         op2;
+
+        for (i=0; i < 2; i++)
+        {
+            if (i == 0 || !single_element)
+            {
+                SET_SF_RM_FROM_MASK( m5 );
+
+                op2 = regs->VR_D( v2, i );
+                softfloat_exceptionFlags = 0;
+                op1 = i64_to_f64( op2);
+                VECTOR_PUT_FLOAT64_NOCC(  op1, v1, i, regs );
+
+                /* Inexact occurred and not masked by m4? */
+                if (softfloat_exceptionFlags && !SUPPRESS_INEXACT( m4 ))
+                {
+                    /* Yes, set FPC flags and test for a trap */
+                    ieee_trap_conds = ieee_exception_test_oux( regs );
+                    VECTOR_IEEE_EXCEPTION_TRAP( i, regs, ieee_trap_conds, FPC_MASK_IMX );
+                }
+            }
+        }
+    }
+#if defined( FEATURE_148_ZVECTOR_ENH_FACILITY_2 )
+    else if (m3 == 2)  /* Word to BFP short format */
+    {
+        /* Fixed 32-bit may need to be rounded to fit in the 23+1    */
+        /* bits available in a short BFP, IEEE Inexact may be        */
+        /* raised. If m4 Inexact suppression (XxC) is on, then no    */
+        /* inexact exception is recognized (no trap nor flag set).   */
+        float32_t   op1;
+        S32         op2;
+
+        for (i=0; i < 4; i++)
+        {
+            if (i == 0 || !single_element)
+            {
+                SET_SF_RM_FROM_MASK( m5 );
+
+                op2 = regs->VR_F( v2, i );
+                softfloat_exceptionFlags = 0;
+                op1 = i32_to_f32( op2 );
+                VECTOR_PUT_FLOAT32_NOCC(  op1, v1, i, regs );
+
+                /* Inexact occurred and not masked by m4? */
+                if (softfloat_exceptionFlags && !SUPPRESS_INEXACT( m4 ))
+                {
+                    /* Yes, set FPC flags and test for a trap */
+                    ieee_trap_conds = ieee_exception_test_oux( regs );
+                    VECTOR_IEEE_EXCEPTION_TRAP( i, regs, ieee_trap_conds, FPC_MASK_IMX );
+                }
+            }
+        }
+    }
+#endif /* defined( FEATURE_148_ZVECTOR_ENH_FACILITY_2 ) */
+    else
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+
+    ZVECTOR_END( regs );
+}
+
+/*-------------------------------------------------------------------*/
+/* E7C4 VFLL   - Vector FP Load Lengthened                   [VRR-a] */
+/* E7C4 VLDE   - deprecated mnemonic                                 */
+/*-------------------------------------------------------------------*/
+DEF_INST( vector_fp_load_lengthened )
+{
+    int     v1, v2, m3, m4, m5;
+    int     i;
+    int     single_element;
+
+    VRR_A( inst, regs, v1, v2, m3, m4, m5 );
+
+    ZVECTOR_CHECK( regs );
+
+    VECTOR_RESERVED_BITS( m4, 0x07 );
+
+    single_element = (m4 & 0x8);
+
+    if (m3 == 2)  /* Short format to Long format, i.e. 32-bit to 64-bit */
+    {
+        float64_t   op1;
+        float32_t   op2;
+        int         j;
+
+        for (i=0, j=0; i < 4; i+=2, j++)
+        {
+            if (i == 0 || !single_element)
+            {
+                VECTOR_GET_FLOAT32_OP(  op2, v2, i, regs );
+                softfloat_exceptionFlags = 0;
+                if (f32_isSignalingNaN( op2 ))
+                {
+                    softfloat_exceptionFlags = softfloat_flag_invalid;
+                    VECTOR_IEEE_EXCEPTION_TRAP_XI( i, regs );
+
+                    FLOAT32_MAKE_QNAN( op2 );
+                    SET_FPC_FLAGS_FROM_SF( regs );
+                }
+                op1 = f32_to_f64( op2 );
+                VECTOR_PUT_FLOAT64_NOCC(  op1, v1, j, regs );
+            }
+        }
+    }
+#if defined( FEATURE_135_ZVECTOR_ENH_FACILITY_1 )
+    else if (m3 == 3)  /* Long format to Extended format, i.e. 64-bit to 128-bit */
+    {
+        float128_t  op1;
+        float64_t   op2;
+
+        VECTOR_GET_FLOAT64_OP(  op2, v2, 0, regs );
+        softfloat_exceptionFlags = 0;
+        if (f64_isSignalingNaN( op2 ))
+        {
+            softfloat_exceptionFlags = softfloat_flag_invalid;
+            VECTOR_IEEE_EXCEPTION_TRAP_XI( 0, regs );
+
+            FLOAT64_MAKE_QNAN( op2 );
+            SET_FPC_FLAGS_FROM_SF( regs );
+        }
+        op1 = f64_to_f128( op2 );
+        VECTOR_PUT_FLOAT128_NOCC( op1, v1, 0, regs );
+    }
+#endif /* defined( FEATURE_135_ZVECTOR_ENH_FACILITY_1 ) */
+    else
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+
+    ZVECTOR_END( regs );
+}
+
+/*-------------------------------------------------------------------*/
+/* E7C5 VFLR   - Vector FP Load Rounded                      [VRR-a] */
+/* E7C5 VLED   - deprecated mnemonic                                 */
+/*-------------------------------------------------------------------*/
+DEF_INST( vector_fp_load_rounded )
+{
+    int     v1, v2, m3, m4, m5;
+
+    VRR_A( inst, regs, v1, v2, m3, m4, m5 );
+
+    ZVECTOR_CHECK( regs );
+    //
+    // TODO: insert code here
+    //
+    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
+    //
+    ZVECTOR_END( regs );
+}
+
+/*-------------------------------------------------------------------*/
+/* E7C7 VFI    - Vector Load FP Integer                      [VRR-a] */
+/*-------------------------------------------------------------------*/
+DEF_INST( vector_load_fp_integer )
+{
+    int     v1, v2, m3, m4, m5;
+
+    VRR_A( inst, regs, v1, v2, m3, m4, m5 );
+
+    ZVECTOR_CHECK( regs );
+    //
+    // TODO: insert code here
+    //
+    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
+    //
+    ZVECTOR_END( regs );
+}
+
+/*-------------------------------------------------------------------*/
+/* E7CA WFK    - Vector FP Compare and Signal Scalar         [VRR-a] */
+/*-------------------------------------------------------------------*/
+DEF_INST( vector_fp_compare_and_signal_scalar )
+{
+    int     v1, v2, m3, m4, m5;
+
+    VRR_A( inst, regs, v1, v2, m3, m4, m5 );
+
+    ZVECTOR_CHECK( regs );
+    //
+    // TODO: insert code here
+    //
+    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
+    //
+    ZVECTOR_END( regs );
+}
+
+/*-------------------------------------------------------------------*/
+/* E7CB WFC    - Vector FP Compare Scalar                    [VRR-a] */
+/*-------------------------------------------------------------------*/
+DEF_INST( vector_fp_compare_scalar )
+{
+    int     v1, v2, m3, m4, m5;
+
+    VRR_A( inst, regs, v1, v2, m3, m4, m5 );
+
+    ZVECTOR_CHECK( regs );
+    //
+    // TODO: insert code here
+    //
+    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
+    //
+    ZVECTOR_END( regs );
+}
+
+/*-------------------------------------------------------------------*/
+/* E7CC VFPSO  - Vector FP Perform Sign Operation            [VRR-a] */
+/*-------------------------------------------------------------------*/
+DEF_INST( vector_fp_perform_sign_operation )
+{
+    int     v1, v2, m3, m4, m5;
+
+    VRR_A( inst, regs, v1, v2, m3, m4, m5 );
+
+    ZVECTOR_CHECK( regs );
+    //
+    // TODO: insert code here
+    //
+    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
+    //
+    ZVECTOR_END( regs );
+}
+
+/*-------------------------------------------------------------------*/
+/* E7CE VFSQ   - Vector FP Square Root                       [VRR-a] */
+/*-------------------------------------------------------------------*/
+DEF_INST( vector_fp_square_root )
+{
+    int     v1, v2, m3, m4, m5;
+
+    VRR_A( inst, regs, v1, v2, m3, m4, m5 );
+
+    ZVECTOR_CHECK( regs );
+    //
+    // TODO: insert code here
+    //
+    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
+    //
+    ZVECTOR_END( regs );
+}
+
+/*-------------------------------------------------------------------*/
+/* E7E2 VFS    - Vector FP Subtract                          [VRR-c] */
+/*-------------------------------------------------------------------*/
+DEF_INST( vector_fp_subtract )
+{
+    int     v1, v2, v3, m4, m5, m6;
+    int     i;
+    int     single_element;
+    U32     ieee_trap_conds = 0;
+
+    VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
+
+    ZVECTOR_CHECK( regs );
+    //
+    // TODO: insert code here
+    //
+    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
+
+    VECTOR_RESERVED_BITS( m5, 0x07 );
+
+    single_element = (m5 & 0x8);
+
+    if (m4 == 3)  /* Long format */
+    {
+        float64_t   op1, op2, op3;
+
+        for (i=0; i < 2; i+=2)
+        {
+            if (i == 0 || !single_element)
+            {
+                VECTOR_GET_FLOAT64_OP(  op3, v3, i, regs );
+                VECTOR_GET_FLOAT64_OP(  op2, v2, i, regs );
+
+                softfloat_exceptionFlags = 0;
+                SET_SF_RM_FROM_FPC;
+
+                op1 = f64_sub( op2, op3 );
+
+                if (softfloat_exceptionFlags)
+                {
+                    VECTOR_IEEE_EXCEPTION_TRAP_XI( i, regs );
+                    ieee_trap_conds = ieee_exception_test_oux( regs );
+
+                    if (ieee_trap_conds & (FPC_MASK_IMO | FPC_MASK_IMU))
+                        op1 = f64_scaledResult( ieee_trap_conds & FPC_MASK_IMO ?
+                            SCALE_FACTOR_ARITH_OFLOW_LONG :
+                            SCALE_FACTOR_ARITH_UFLOW_LONG );
+                }
+
+                VECTOR_PUT_FLOAT64_NOCC( op1, v1, i, regs );
+
+                VECTOR_IEEE_EXCEPTION_TRAP( i, regs, ieee_trap_conds,
+                    FPC_MASK_IMO | FPC_MASK_IMU | FPC_MASK_IMX );
+            }
+        }
+    }
+#if defined( FEATURE_135_ZVECTOR_ENH_FACILITY_1 )
+    else if (m4 == 2)  /* Short format */
+    {
+        float32_t   op1, op2, op3;
+
+        for (i=0; i < 4; i++)
+        {
+            if (i == 0 || !single_element)
+            {
+                VECTOR_GET_FLOAT32_OP(  op3, v3, i, regs );
+                VECTOR_GET_FLOAT32_OP(  op2, v2, i, regs );
+
+                softfloat_exceptionFlags = 0;
+                SET_SF_RM_FROM_FPC;
+
+                op1 = f32_sub( op2, op3 );
+
+                if (softfloat_exceptionFlags)
+                {
+                    VECTOR_IEEE_EXCEPTION_TRAP_XI( i, regs );
+                    ieee_trap_conds = ieee_exception_test_oux( regs );
+
+                    if (ieee_trap_conds & (FPC_MASK_IMO | FPC_MASK_IMU))
+                        op1 = f32_scaledResult( ieee_trap_conds & FPC_MASK_IMO ?
+                            SCALE_FACTOR_ARITH_OFLOW_SHORT :
+                            SCALE_FACTOR_ARITH_UFLOW_SHORT );
+                }
+
+                VECTOR_PUT_FLOAT32_NOCC( op1, v1, i, regs );
+
+                VECTOR_IEEE_EXCEPTION_TRAP( i, regs, ieee_trap_conds,
+                    FPC_MASK_IMO | FPC_MASK_IMU | FPC_MASK_IMX );
+            }
+        }
+    }
+    else if (m4 == 4)  /* Extended format */
+    {
+        float128_t  op1, op2, op3;
+
+        VECTOR_GET_FLOAT128_OP( op3, v3, 0, regs );
+        VECTOR_GET_FLOAT128_OP( op2, v2, 0, regs );
+
+        softfloat_exceptionFlags = 0;
+        SET_SF_RM_FROM_FPC;
+
+        op1 = f128_sub( op2, op3 );
+
+        if (softfloat_exceptionFlags)
+        {
+            VECTOR_IEEE_EXCEPTION_TRAP_XI( 0, regs );
+            ieee_trap_conds = ieee_exception_test_oux( regs );
+
+            if (ieee_trap_conds & (FPC_MASK_IMO | FPC_MASK_IMU))
+                op1 = f128_scaledResult( ieee_trap_conds & FPC_MASK_IMO ?
+                    SCALE_FACTOR_ARITH_OFLOW_EXTD :
+                    SCALE_FACTOR_ARITH_UFLOW_EXTD );
+        }
+
+        VECTOR_PUT_FLOAT128_NOCC( op1, v1, 0, regs );
+
+        VECTOR_IEEE_EXCEPTION_TRAP( 0, regs, ieee_trap_conds,
+            FPC_MASK_IMO | FPC_MASK_IMU | FPC_MASK_IMX );
+
+
+
+    }
+#endif /* defined( FEATURE_135_ZVECTOR_ENH_FACILITY_1 ) */
+    else
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+
+
+    //
+    ZVECTOR_END( regs );
+}
+
+/*-------------------------------------------------------------------*/
+/* E7E3 VFA    - Vector FP Add                               [VRR-c] */
+/*-------------------------------------------------------------------*/
+DEF_INST( vector_fp_add )
+{
+    int     v1, v2, v3, m4, m5, m6;
+    int     i;
+    int     single_element;
+
+    VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
+
+    ZVECTOR_CHECK( regs );
+    //
+    // TODO: insert code here
+    //
+    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
+
+    VECTOR_RESERVED_BITS( m5, 0x07 );
+
+    single_element = (m5 & 0x8);
+
+    if (m4 == 3)  /* Long format */
+    {
+        float64_t   op1, op2, op3;
+
+        for (i=0; i < 2; i+=2)
+        {
+            if (i == 0 || !single_element)
+            {
+                VECTOR_GET_FLOAT64_OP(  op3, v3, i, regs );
+                VECTOR_GET_FLOAT64_OP(  op2, v2, i, regs );
+
+                VECTOR_PUT_FLOAT64_NOCC(  op1, v1, i, regs );
+            }
+        }
+    }
+#if defined( FEATURE_135_ZVECTOR_ENH_FACILITY_1 )
+    else if (m4 == 2)  /* Short format */
+    {
+        float32_t   op1, op2, op3;
+
+        for (i=0; i < 4; i++)
+        {
+            if (i == 0 || !single_element)
+            {
+                VECTOR_GET_FLOAT32_OP(  op3, v3, i, regs );
+                VECTOR_GET_FLOAT32_OP(  op2, v2, i, regs );
+
+                VECTOR_PUT_FLOAT32_NOCC(  op1, v1, i, regs );
+            }
+        }
+    }
+    else if (m4 == 4)  /* Extended format */
+    {
+        float128_t  op1, op2, op3;
+
+        VECTOR_GET_FLOAT128_OP( op3, v3, 0, regs );
+        VECTOR_GET_FLOAT128_OP( op2, v2, 0, regs );
+
+        VECTOR_PUT_FLOAT128_NOCC( op1, v1, 0, regs );
+    }
+#endif /* defined( FEATURE_135_ZVECTOR_ENH_FACILITY_1 ) */
+    else
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+
+
+    //
+    ZVECTOR_END( regs );
+}
+
+/*-------------------------------------------------------------------*/
+/* E7E5 VFD    - Vector FP Divide                            [VRR-c] */
+/*-------------------------------------------------------------------*/
+DEF_INST( vector_fp_divide )
+{
+    int     v1, v2, v3, m4, m5, m6;
+    int     i;
+    int     single_element;
+
+    VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
+
+    ZVECTOR_CHECK( regs );
+    //
+    // TODO: insert code here
+    //
+    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
+
+    VECTOR_RESERVED_BITS( m5, 0x07 );
+
+    single_element = (m5 & 0x8);
+
+    if (m4 == 3)  /* Long format */
+    {
+        float64_t   op1, op2, op3;
+
+        for (i=0; i < 2; i+=2)
+        {
+            if (i == 0 || !single_element)
+            {
+                VECTOR_GET_FLOAT64_OP(  op3, v3, i, regs );
+                VECTOR_GET_FLOAT64_OP(  op2, v2, i, regs );
+
+                VECTOR_PUT_FLOAT64_NOCC(  op1, v1, i, regs );
+            }
+        }
+    }
+#if defined( FEATURE_135_ZVECTOR_ENH_FACILITY_1 )
+    else if (m4 == 2)  /* Short format */
+    {
+        float32_t   op1, op2, op3;
+
+        for (i=0; i < 4; i++)
+        {
+            if (i == 0 || !single_element)
+            {
+                VECTOR_GET_FLOAT32_OP(  op3, v3, i, regs );
+                VECTOR_GET_FLOAT32_OP(  op2, v2, i, regs );
+
+                VECTOR_PUT_FLOAT32_NOCC(  op1, v1, i, regs );
+            }
+        }
+    }
+    else if (m4 == 4)  /* Extended format */
+    {
+        float128_t  op1, op2, op3;
+
+        VECTOR_GET_FLOAT128_OP( op3, v3, 0, regs );
+        VECTOR_GET_FLOAT128_OP( op2, v2, 0, regs );
+
+        VECTOR_PUT_FLOAT128_NOCC( op1, v1, 0, regs );
+    }
+#endif /* defined( FEATURE_135_ZVECTOR_ENH_FACILITY_1 ) */
+    else
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+
+
+    //
+    ZVECTOR_END( regs );
+}
+
+/*-------------------------------------------------------------------*/
+/* E7E7 VFM    - Vector FP Multiply                          [VRR-c] */
+/*-------------------------------------------------------------------*/
+DEF_INST( vector_fp_multiply )
+{
+    int     v1, v2, v3, m4, m5, m6;
+    int     i;
+    int     single_element;
+
+    VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
+
+    ZVECTOR_CHECK( regs );
+    //
+    // TODO: insert code here
+    //
+    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
+
+    VECTOR_RESERVED_BITS( m5, 0x07 );
+
+    single_element = (m5 & 0x8);
+
+    if (m4 == 3)  /* Long format */
+    {
+        float64_t   op1, op2, op3;
+
+        for (i=0; i < 2; i+=2)
+        {
+            if (i == 0 || !single_element)
+            {
+                VECTOR_GET_FLOAT64_OP(  op3, v3, i, regs );
+                VECTOR_GET_FLOAT64_OP(  op2, v2, i, regs );
+
+                VECTOR_PUT_FLOAT64_NOCC(  op1, v1, i, regs );
+            }
+        }
+    }
+#if defined( FEATURE_135_ZVECTOR_ENH_FACILITY_1 )
+    else if (m4 == 2)  /* Short format */
+    {
+        float32_t   op1, op2, op3;
+
+        for (i=0; i < 4; i++)
+        {
+            if (i == 0 || !single_element)
+            {
+                VECTOR_GET_FLOAT32_OP(  op3, v3, i, regs );
+                VECTOR_GET_FLOAT32_OP(  op2, v2, i, regs );
+
+                VECTOR_PUT_FLOAT32_NOCC(  op1, v1, i, regs );
+            }
+        }
+    }
+    else if (m4 == 4)  /* Extended format */
+    {
+        float128_t  op1, op2, op3;
+
+        VECTOR_GET_FLOAT128_OP( op3, v3, 0, regs );
+        VECTOR_GET_FLOAT128_OP( op2, v2, 0, regs );
+
+        VECTOR_PUT_FLOAT128_NOCC( op1, v1, 0, regs );
+    }
+#endif /* defined( FEATURE_135_ZVECTOR_ENH_FACILITY_1 ) */
+    else
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+
+
+    //
+    ZVECTOR_END( regs );
+}
+
+/*-------------------------------------------------------------------*/
+/* E7E8 VFCE   - Vector FP Compare Equal                     [VRR-c] */
+/*-------------------------------------------------------------------*/
+DEF_INST( vector_fp_compare_equal )
+{
+    int     v1, v2, v3, m4, m5, m6;
+    int     i;
+    int     single_element;
+
+    VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
+
+    ZVECTOR_CHECK( regs );
+    //
+    // TODO: insert code here
+    //
+    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
+
+    VECTOR_RESERVED_BITS( m5, 0x03 );
+    VECTOR_RESERVED_BITS( m6, 0x0E );
+
+    single_element = (m5 & 0x8);
+
+    if (m4 == 3)  /* Long format */
+    {
+        float64_t   op1, op2, op3;
+
+        for (i=0; i < 2; i+=2)
+        {
+            if (i == 0 || !single_element)
+            {
+                VECTOR_GET_FLOAT64_OP(  op3, v3, i, regs );
+                VECTOR_GET_FLOAT64_OP(  op2, v2, i, regs );
+
+                VECTOR_PUT_FLOAT64_NOCC(  op1, v1, i, regs );
+            }
+        }
+    }
+#if defined( FEATURE_135_ZVECTOR_ENH_FACILITY_1 )
+    else if (m4 == 2)  /* Short format */
+    {
+        float32_t   op1, op2, op3;
+
+        for (i=0; i < 4; i++)
+        {
+            if (i == 0 || !single_element)
+            {
+                VECTOR_GET_FLOAT32_OP(  op3, v3, i, regs );
+                VECTOR_GET_FLOAT32_OP(  op2, v2, i, regs );
+
+                VECTOR_PUT_FLOAT32_NOCC(  op1, v1, i, regs );
+            }
+        }
+    }
+    else if (m4 == 4)  /* Extended format */
+    {
+        float128_t  op1, op2, op3;
+
+        VECTOR_GET_FLOAT128_OP( op3, v3, 0, regs );
+        VECTOR_GET_FLOAT128_OP( op2, v2, 0, regs );
+
+        VECTOR_PUT_FLOAT128_NOCC( op1, v1, 0, regs );
+    }
+#endif /* defined( FEATURE_135_ZVECTOR_ENH_FACILITY_1 ) */
+    else
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+
+
+    //
+    ZVECTOR_END( regs );
+}
+
+/*-------------------------------------------------------------------*/
+/* E7EA VFCHE  - Vector FP Compare High or Equal             [VRR-c] */
+/*-------------------------------------------------------------------*/
+DEF_INST( vector_fp_compare_high_or_equal )
+{
+    int     v1, v2, v3, m4, m5, m6;
+    int     i;
+    int     single_element;
+
+    VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
+
+    ZVECTOR_CHECK( regs );
+    //
+    // TODO: insert code here
+    //
+    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
+
+    VECTOR_RESERVED_BITS( m5, 0x03 );
+    VECTOR_RESERVED_BITS( m6, 0x0E );
+
+    single_element = (m5 & 0x8);
+
+    if (m4 == 3)  /* Long format */
+    {
+        float64_t   op1, op2, op3;
+
+        for (i=0; i < 2; i+=2)
+        {
+            if (i == 0 || !single_element)
+            {
+                VECTOR_GET_FLOAT64_OP(  op3, v3, i, regs );
+                VECTOR_GET_FLOAT64_OP(  op2, v2, i, regs );
+
+                VECTOR_PUT_FLOAT64_NOCC(  op1, v1, i, regs );
+            }
+        }
+    }
+#if defined( FEATURE_135_ZVECTOR_ENH_FACILITY_1 )
+    else if (m4 == 2)  /* Short format */
+    {
+        float32_t   op1, op2, op3;
+
+        for (i=0; i < 4; i++)
+        {
+            if (i == 0 || !single_element)
+            {
+                VECTOR_GET_FLOAT32_OP(  op3, v3, i, regs );
+                VECTOR_GET_FLOAT32_OP(  op2, v2, i, regs );
+
+                VECTOR_PUT_FLOAT32_NOCC(  op1, v1, i, regs );
+            }
+        }
+    }
+    else if (m4 == 4)  /* Extended format */
+    {
+        float128_t  op1, op2, op3;
+
+        VECTOR_GET_FLOAT128_OP( op3, v3, 0, regs );
+        VECTOR_GET_FLOAT128_OP( op2, v2, 0, regs );
+
+        VECTOR_PUT_FLOAT128_NOCC( op1, v1, 0, regs );
+    }
+#endif /* defined( FEATURE_135_ZVECTOR_ENH_FACILITY_1 ) */
+    else
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+
+
+    //
+    ZVECTOR_END( regs );
+}
+
+/*-------------------------------------------------------------------*/
+/* E7EB VFCH   - Vector FP Compare High                      [VRR-c] */
+/*-------------------------------------------------------------------*/
+DEF_INST( vector_fp_compare_high )
+{
+    int     v1, v2, v3, m4, m5, m6;
+    int     i;
+    int     single_element;
+
+    VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
+
+    ZVECTOR_CHECK( regs );
+    //
+    // TODO: insert code here
+    //
+    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
+
+    VECTOR_RESERVED_BITS( m5, 0x03 );
+    VECTOR_RESERVED_BITS( m6, 0x0E );
+
+    single_element = (m5 & 0x8);
+
+    if (m4 == 3)  /* Long format */
+    {
+        float64_t   op1, op2, op3;
+
+        for (i=0; i < 2; i+=2)
+        {
+            if (i == 0 || !single_element)
+            {
+                VECTOR_GET_FLOAT64_OP(  op3, v3, i, regs );
+                VECTOR_GET_FLOAT64_OP(  op2, v2, i, regs );
+
+                VECTOR_PUT_FLOAT64_NOCC(  op1, v1, i, regs );
+            }
+        }
+    }
+#if defined( FEATURE_135_ZVECTOR_ENH_FACILITY_1 )
+    else if (m4 == 2)  /* Short format */
+    {
+        float32_t   op1, op2, op3;
+
+        for (i=0; i < 4; i++)
+        {
+            if (i == 0 || !single_element)
+            {
+                VECTOR_GET_FLOAT32_OP(  op3, v3, i, regs );
+                VECTOR_GET_FLOAT32_OP(  op2, v2, i, regs );
+
+                VECTOR_PUT_FLOAT32_NOCC(  op1, v1, i, regs );
+            }
+        }
+    }
+    else if (m4 == 4)  /* Extended format */
+    {
+        float128_t  op1, op2, op3;
+
+        VECTOR_GET_FLOAT128_OP( op3, v3, 0, regs );
+        VECTOR_GET_FLOAT128_OP( op2, v2, 0, regs );
+
+        VECTOR_PUT_FLOAT128_NOCC( op1, v1, 0, regs );
+    }
+#endif /* defined( FEATURE_135_ZVECTOR_ENH_FACILITY_1 ) */
+    else
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+
+
+    //
+    ZVECTOR_END( regs );
+}
+
+#if defined( FEATURE_135_ZVECTOR_ENH_FACILITY_1 )
+
+/*-------------------------------------------------------------------*/
+/* E7EE VFMIN  - Vector FP Minimum                           [VRR-c] */
+/*-------------------------------------------------------------------*/
+// FixMe!  Add vector_fp_minimum to tables
+DEF_INST( vector_fp_minimum )
+{
+    int     v1, v2, v3, m4, m5, m6;
+    int     i;
+    int     single_element;
+
+    VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
+
+    ZVECTOR_CHECK( regs );
+    //
+    // TODO: insert code here
+    //
+    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
+
+
+    if ((m6 >= 5 && m6 <= 7) || (m6 >= 13 && m6 <= 15))  /* Valid performed? */
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+
+    VECTOR_RESERVED_BITS( m5, 0x07 );
+
+    single_element = (m5 & 0x8);
+
+    if (m4 == 3)  /* Long format */
+    {
+        float64_t   op1, op2, op3;
+
+        for (i=0; i < 2; i+=2)
+        {
+            if (i == 0 || !single_element)
+            {
+                VECTOR_GET_FLOAT64_OP(  op3, v3, i, regs );
+                VECTOR_GET_FLOAT64_OP(  op2, v2, i, regs );
+
+                VECTOR_PUT_FLOAT64_NOCC(  op1, v1, i, regs );
+            }
+        }
+    }
+    else if (m4 == 2)  /* Short format */
+    {
+        float32_t   op1, op2, op3;
+
+        for (i=0; i < 4; i++)
+        {
+            if (i == 0 || !single_element)
+            {
+                VECTOR_GET_FLOAT32_OP(  op3, v3, i, regs );
+                VECTOR_GET_FLOAT32_OP(  op2, v2, i, regs );
+
+                VECTOR_PUT_FLOAT32_NOCC(  op1, v1, i, regs );
+            }
+        }
+    }
+    else if (m4 == 4)  /* Extended format */
+    {
+        float128_t  op1, op2, op3;
+
+        VECTOR_GET_FLOAT128_OP( op3, v3, 0, regs );
+        VECTOR_GET_FLOAT128_OP( op2, v2, 0, regs );
+
+        VECTOR_PUT_FLOAT128_NOCC( op1, v1, 0, regs );
+    }
+    else
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+
+
+    //
+    ZVECTOR_END( regs );
+}
+
+/*-------------------------------------------------------------------*/
+/* E7EF VFMAX  - Vector FP Maximum                           [VRR-c] */
+/*-------------------------------------------------------------------*/
+// FixMe!  Add vector_fp_maximum to tables
+DEF_INST( vector_fp_maximum )
+{
+    int     v1, v2, v3, m4, m5, m6;
+    int     i;
+    int     single_element;
+
+    VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
+
+    ZVECTOR_CHECK( regs );
+    //
+    // TODO: insert code here
+    //
+    if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
+
+
+    if ((m6 >= 5 && m6 <= 7) || (m6 >= 13 && m6 <= 15))  /* Valid performed? */
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+
+    VECTOR_RESERVED_BITS( m5, 0x07 );
+
+    single_element = (m5 & 0x8);
+
+    if (m4 == 3)  /* Long format */
+    {
+        float64_t   op1, op2, op3;
+
+        for (i=0; i < 2; i+=2)
+        {
+            if (i == 0 || !single_element)
+            {
+                VECTOR_GET_FLOAT64_OP(  op3, v3, i, regs );
+                VECTOR_GET_FLOAT64_OP(  op2, v2, i, regs );
+
+                VECTOR_PUT_FLOAT64_NOCC(  op1, v1, i, regs );
+            }
+        }
+    }
+    else if (m4 == 2)  /* Short format */
+    {
+        float32_t   op1, op2, op3;
+
+        for (i=0; i < 4; i++)
+        {
+            if (i == 0 || !single_element)
+            {
+                VECTOR_GET_FLOAT32_OP(  op3, v3, i, regs );
+                VECTOR_GET_FLOAT32_OP(  op2, v2, i, regs );
+
+                VECTOR_PUT_FLOAT32_NOCC(  op1, v1, i, regs );
+            }
+        }
+    }
+    else if (m4 == 4)  /* Extended format */
+    {
+        float128_t  op1, op2, op3;
+
+        VECTOR_GET_FLOAT128_OP( op3, v3, 0, regs );
+        VECTOR_GET_FLOAT128_OP( op2, v2, 0, regs );
+
+        VECTOR_PUT_FLOAT128_NOCC( op1, v1, 0, regs );
+    }
+    else
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+
+
+    //
+    ZVECTOR_END( regs );
+}
+
+#endif /* defined( FEATURE_135_ZVECTOR_ENH_FACILITY_1 ) */
+
+#endif /* defined( FEATURE_129_ZVECTOR_FACILITY ) */
+
+/*===========================================================================*/
+/*  End of z/Arch Vector Floating Point instructions                         */
+/*===========================================================================*/
 
 /*
  * Chapter 9. Floating-Point Overview and Support Instructions

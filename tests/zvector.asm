@@ -452,10 +452,19 @@ test21   vlm   v2,v3,data21
          vst   v2,have21
          clc   have21,must21
          jne   failure
-         j     success
+         j     test22
 data21   dc    x'006e0069006f00000000000000000000'
          dc    x'ae37a476e0c234716eeb0e6b02b28019'
 have21   ds    xl16
 must21   dc    x'6e696f0000000000ffffffffffffffff'
+*- VSTRL --------------------------------------------------------------
+test22   vl    v2,data22
+         vstrl v2,have22,15
+         clc   have22,must22
+         jne   failure
+         j     success
+data22   dc    x'006e0069006f00000000000000000000'
+have22   ds    xl16
+must22   dc    x'6e696f0000000000ffffffffffffffff'
 *---------------------------------------------------------------------
          end

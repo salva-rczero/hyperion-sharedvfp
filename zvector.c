@@ -113,7 +113,7 @@ DEF_INST( vector_load_logical_element_and_zero )
     PER_ZEROADDR_XCHECK2( regs, x2, b2 );
 
 #if defined(_M_X64) || defined( __SSE2__ )
-    VR_Q(v1).v = _mm_setzero_si128();
+    VR_UQ(v1).v = _mm_setzero_si128();
 #else
     VR_UD(v1, 0) = 0;
     VR_UD(v1, 1) = 0;
@@ -191,7 +191,7 @@ DEF_INST( vector_load )
     ZVECTOR_CHECK( regs );
     PER_ZEROADDR_XCHECK2( regs, x2, b2 );
 
-    VR_Q(v1) = ARCH_DEP( vfetch16 )( effective_addr2, b2, regs );
+    VR_UQ(v1) = ARCH_DEP( vfetch16 )( effective_addr2, b2, regs );
 
     ZVECTOR_END( regs );
 }
@@ -323,7 +323,7 @@ DEF_INST( vector_store )
     ZVECTOR_CHECK( regs );
     PER_ZEROADDR_XCHECK2( regs, x2, b2 );
 
-    ARCH_DEP( vstore16 )( VR_Q(v1), effective_addr2, b2, regs );
+    ARCH_DEP( vstore16 )( VR_UQ(v1), effective_addr2, b2, regs );
 
     ZVECTOR_END( regs );
 }
@@ -636,7 +636,7 @@ DEF_INST( vector_load_multiple )
 
     for (i=v1; i <= v3; i++)
     {
-        VR_Q(i) = ARCH_DEP( vfetch16 )( effective_addr2, b2, regs );
+        VR_UQ(i) = ARCH_DEP( vfetch16 )( effective_addr2, b2, regs );
         effective_addr2 += 16;
         effective_addr2 &= ADDRESS_MAXWRAP( regs );
     }
@@ -775,7 +775,7 @@ DEF_INST( vector_store_multiple )
 
     for (i=v1; i <= v3; i++)
     {
-        ARCH_DEP( vstore16 )( VR_Q(i), effective_addr2, b2, regs );
+        ARCH_DEP( vstore16 )( VR_UQ(i), effective_addr2, b2, regs );
         effective_addr2 += 16;
         effective_addr2 &= ADDRESS_MAXWRAP( regs );
     }
@@ -992,7 +992,7 @@ DEF_INST( vector_generate_mask )
 /*-------------------------------------------------------------------*/
 /* E74A VFTCI  - Vector FP Test Data Class Immediate         [VRI-e] */
 /*-------------------------------------------------------------------*/
-DEF_INST( vector_fp_test_data_class_immediate )
+/*DEF_INST(vector_fp_test_data_class_immediate)
 {
 //    int     v1, v2, i3, m4, m5;
 //, i, max, sel = 0;
@@ -1002,7 +1002,6 @@ DEF_INST( vector_fp_test_data_class_immediate )
 
 //    VRI_E( inst, regs, v1, v2, i3, m4, m5 );
 
-/*
     ZVECTOR_CHECK( regs );
 
 #define M5_RE ((m5 & 0x7) != 0) // Reserved
@@ -1061,7 +1060,6 @@ DEF_INST( vector_fp_test_data_class_immediate )
     }
 #undef M5_RE
 #undef M5_SE
-    */
     //
     // TODO: insert code here
     //
@@ -1069,7 +1067,7 @@ DEF_INST( vector_fp_test_data_class_immediate )
     //
 
     ZVECTOR_END( regs );
-}
+}*/
 
 /*-------------------------------------------------------------------*/
 /* E74D VREP   - Vector Replicate                            [VRI-c] */
@@ -1258,7 +1256,7 @@ DEF_INST( vector_load_vector )
     
     ZVECTOR_CHECK( regs );
 
-    VR_Q(v1) = VR_Q(v2);
+    VR_UQ(v1) = VR_UQ(v2);
 
     ZVECTOR_END( regs );
 }
@@ -2629,14 +2627,8 @@ DEF_INST( vector_select )
 /*-------------------------------------------------------------------*/
 /* E78E VFMS   - Vector FP Multiply and Subtract             [VRR-e] */
 /*-------------------------------------------------------------------*/
-DEF_INST( vector_fp_multiply_and_subtract )
+/*DEF_INST(vector_fp_multiply_and_subtract)
 {
-/* ============================================= */
-/* TEMPORARY while zvector.c is being developed */
-#if defined(__GNUC__)
-    #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-#endif
-/* ============================================= */ 
     int     v1, v2, v3, v4, m5, m6;
 
     VRR_E( inst, regs, v1, v2, v3, v4, m5, m6 );
@@ -2648,12 +2640,12 @@ DEF_INST( vector_fp_multiply_and_subtract )
     if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
     //
     ZVECTOR_END( regs );
-}
+}*/
 
 /*-------------------------------------------------------------------*/
 /* E78F VFMA   - Vector FP Multiply and Add                  [VRR-e] */
 /*-------------------------------------------------------------------*/
-DEF_INST( vector_fp_multiply_and_add )
+/*DEF_INST(vector_fp_multiply_and_add)
 {
     int     v1, v2, v3, v4, m5, m6;
 
@@ -2666,7 +2658,7 @@ DEF_INST( vector_fp_multiply_and_add )
     if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
     //
     ZVECTOR_END( regs );
-}
+}*/
 
 /*-------------------------------------------------------------------*/
 /* E794 VPK    - Vector Pack                                 [VRR-c] */
@@ -3418,7 +3410,7 @@ DEF_INST( vector_galois_field_multiply_sum )
             U64 b = VR_UD(v3, i);
             tempQ[i] = _mm_clmulepi64_si128(_mm_set_epi64x(0, a), _mm_set_epi64x(0, b), 0);
         }
-        VR_Q(v1).v = _mm_xor_si128(tempQ[0], tempQ[1]);
+        VR_UQ(v1).v = _mm_xor_si128(tempQ[0], tempQ[1]);
         break;
     default:
         ARCH_DEP(program_interrupt) (regs, PGM_SPECIFICATION_EXCEPTION);
@@ -3561,7 +3553,7 @@ DEF_INST( vector_galois_field_multiply_sum_and_accumulate )
         }
         result = _mm_set_epi64x(VR_UD(v4,0), VR_UD(v4, 1));
         result = _mm_xor_si128(result, tempQ[0]);
-        VR_Q(v1).v = _mm_xor_si128(result, tempQ[1]);
+        VR_UQ(v1).v = _mm_xor_si128(result, tempQ[1]);
         break;
     default:
         ARCH_DEP(program_interrupt) (regs, PGM_SPECIFICATION_EXCEPTION);
@@ -3638,7 +3630,7 @@ DEF_INST( vector_subtract_with_borrow_indication )
 /*-------------------------------------------------------------------*/
 /* E7C0 VCLGD  - Vector FP Convert to Logical                [VRR-a] */
 /*-------------------------------------------------------------------*/
-DEF_INST( vector_fp_convert_to_logical )
+/*DEF_INST(vector_fp_convert_to_logical)
 {
     int     v1, v2, m3, m4, m5;
 
@@ -3651,12 +3643,12 @@ DEF_INST( vector_fp_convert_to_logical )
     if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
     //
     ZVECTOR_END( regs );
-}
+}*/
 
 /*-------------------------------------------------------------------*/
 /* E7C1 VCDLG  - Vector FP Convert from Logical              [VRR-a] */
 /*-------------------------------------------------------------------*/
-DEF_INST( vector_fp_convert_from_logical )
+/*DEF_INST(vector_fp_convert_from_logical)
 {
     int     v1, v2, m3, m4, m5;
 
@@ -3669,12 +3661,12 @@ DEF_INST( vector_fp_convert_from_logical )
     if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
     //
     ZVECTOR_END( regs );
-}
+}*/
 
 /*-------------------------------------------------------------------*/
 /* E7C2 VCGD   - Vector FP Convert to Fixed                  [VRR-a] */
 /*-------------------------------------------------------------------*/
-DEF_INST( vector_fp_convert_to_fixed )
+/*DEF_INST(vector_fp_convert_to_fixed)
 {
     int     v1, v2, m3, m4, m5;
 
@@ -3687,12 +3679,12 @@ DEF_INST( vector_fp_convert_to_fixed )
     if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
     //
     ZVECTOR_END( regs );
-}
+}*/
 
 /*-------------------------------------------------------------------*/
 /* E7C3 VCDG   - Vector FP Convert from Fixed                [VRR-a] */
 /*-------------------------------------------------------------------*/
-DEF_INST( vector_fp_convert_from_fixed )
+/*DEF_INST(vector_fp_convert_from_fixed)
 {
     int     v1, v2, m3, m4, m5;
 
@@ -3705,12 +3697,12 @@ DEF_INST( vector_fp_convert_from_fixed )
     if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
     //
     ZVECTOR_END( regs );
-}
+}*/
 
 /*-------------------------------------------------------------------*/
 /* E7C4 VFLL   - Vector FP Load Lengthened                   [VRR-a] */
 /*-------------------------------------------------------------------*/
-DEF_INST( vector_fp_load_lengthened )
+/*DEF_INST(vector_fp_load_lengthened)
 {
     int     v1, v2, m3, m4, m5;
 
@@ -3723,12 +3715,12 @@ DEF_INST( vector_fp_load_lengthened )
     if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
     //
     ZVECTOR_END( regs );
-}
+}*/
 
 /*-------------------------------------------------------------------*/
 /* E7C5 VFLR   - Vector FP Load Rounded                      [VRR-a] */
 /*-------------------------------------------------------------------*/
-DEF_INST( vector_fp_load_rounded )
+/*DEF_INST(vector_fp_load_rounded)
 {
     int     v1, v2, m3, m4, m5;
 
@@ -3741,12 +3733,12 @@ DEF_INST( vector_fp_load_rounded )
     if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
     //
     ZVECTOR_END( regs );
-}
+}*/
 
 /*-------------------------------------------------------------------*/
 /* E7C7 VFI    - Vector Load FP Integer                      [VRR-a] */
 /*-------------------------------------------------------------------*/
-DEF_INST( vector_load_fp_integer )
+/*DEF_INST(vector_load_fp_integer)
 {
     int     v1, v2, m3, m4, m5;
 
@@ -3759,12 +3751,12 @@ DEF_INST( vector_load_fp_integer )
     if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
     //
     ZVECTOR_END( regs );
-}
+}*/
 
 /*-------------------------------------------------------------------*/
 /* E7CA WFK    - Vector FP Compare and Signal Scalar         [VRR-a] */
 /*-------------------------------------------------------------------*/
-DEF_INST( vector_fp_compare_and_signal_scalar )
+/*DEF_INST(vector_fp_compare_and_signal_scalar)
 {
     int     v1, v2, m3, m4, m5;
 
@@ -3777,12 +3769,12 @@ DEF_INST( vector_fp_compare_and_signal_scalar )
     if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
     //
     ZVECTOR_END( regs );
-}
+}*/
 
 /*-------------------------------------------------------------------*/
 /* E7CB WFC    - Vector FP Compare Scalar                    [VRR-a] */
 /*-------------------------------------------------------------------*/
-DEF_INST( vector_fp_compare_scalar )
+/*DEF_INST(vector_fp_compare_scalar)
 {
     int     v1, v2, m3, m4, m5;
 
@@ -3795,12 +3787,12 @@ DEF_INST( vector_fp_compare_scalar )
     if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
     //
     ZVECTOR_END( regs );
-}
+}*/
 
 /*-------------------------------------------------------------------*/
 /* E7CC VFPSO  - Vector FP Perform Sign Operation            [VRR-a] */
 /*-------------------------------------------------------------------*/
-DEF_INST( vector_fp_perform_sign_operation )
+/*DEF_INST(vector_fp_perform_sign_operation)
 {
     int     v1, v2, m3, m4, m5;
 
@@ -3813,12 +3805,12 @@ DEF_INST( vector_fp_perform_sign_operation )
     if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
     //
     ZVECTOR_END( regs );
-}
+}*/
 
 /*-------------------------------------------------------------------*/
 /* E7CE VFSQ   - Vector FP Square Root                       [VRR-a] */
 /*-------------------------------------------------------------------*/
-DEF_INST( vector_fp_square_root )
+/*DEF_INST(vector_fp_square_root)
 {
     int     v1, v2, m3, m4, m5;
 
@@ -3831,7 +3823,7 @@ DEF_INST( vector_fp_square_root )
     if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
     //
     ZVECTOR_END( regs );
-}
+}*/
 
 /*-------------------------------------------------------------------*/
 /* E7D4 VUPLL  - Vector Unpack Logical Low                   [VRR-a] */
@@ -4224,7 +4216,7 @@ DEF_INST( vector_load_positive )
 /*-------------------------------------------------------------------*/
 /* E7E2 VFS    - Vector FP Subtract                          [VRR-c] */
 /*-------------------------------------------------------------------*/
-DEF_INST( vector_fp_subtract )
+/*DEF_INST(vector_fp_subtract)
 {
     int     v1, v2, v3, m4, m5, m6;
 
@@ -4237,12 +4229,12 @@ DEF_INST( vector_fp_subtract )
     if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
     //
     ZVECTOR_END( regs );
-}
+}*/
 
 /*-------------------------------------------------------------------*/
 /* E7E3 VFA    - Vector FP Add                               [VRR-c] */
 /*-------------------------------------------------------------------*/
-DEF_INST( vector_fp_add )
+/*DEF_INST(vector_fp_add)
 {
     int     v1, v2, v3, m4, m5, m6;
 
@@ -4255,12 +4247,12 @@ DEF_INST( vector_fp_add )
     if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
     //
     ZVECTOR_END( regs );
-}
+}*/
 
 /*-------------------------------------------------------------------*/
 /* E7E5 VFD    - Vector FP Divide                            [VRR-c] */
 /*-------------------------------------------------------------------*/
-DEF_INST( vector_fp_divide )
+/*DEF_INST(vector_fp_divide)
 {
     int     v1, v2, v3, m4, m5, m6;
 
@@ -4273,12 +4265,12 @@ DEF_INST( vector_fp_divide )
     if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
     //
     ZVECTOR_END( regs );
-}
+}*/
 
 /*-------------------------------------------------------------------*/
 /* E7E7 VFM    - Vector FP Multiply                          [VRR-c] */
 /*-------------------------------------------------------------------*/
-DEF_INST( vector_fp_multiply )
+/*DEF_INST(vector_fp_multiply)
 {
     int     v1, v2, v3, m4, m5, m6;
 
@@ -4291,12 +4283,12 @@ DEF_INST( vector_fp_multiply )
     if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
     //
     ZVECTOR_END( regs );
-}
+}*/
 
 /*-------------------------------------------------------------------*/
 /* E7E8 VFCE   - Vector FP Compare Equal                     [VRR-c] */
 /*-------------------------------------------------------------------*/
-DEF_INST( vector_fp_compare_equal )
+/*DEF_INST(vector_fp_compare_equal)
 {
     int     v1, v2, v3, m4, m5, m6;
 
@@ -4309,12 +4301,12 @@ DEF_INST( vector_fp_compare_equal )
     if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
     //
     ZVECTOR_END( regs );
-}
+}*/
 
 /*-------------------------------------------------------------------*/
 /* E7EA VFCHE  - Vector FP Compare High or Equal             [VRR-c] */
 /*-------------------------------------------------------------------*/
-DEF_INST( vector_fp_compare_high_or_equal )
+/*DEF_INST(vector_fp_compare_high_or_equal)
 {
     int     v1, v2, v3, m4, m5, m6;
 
@@ -4327,12 +4319,12 @@ DEF_INST( vector_fp_compare_high_or_equal )
     if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
     //
     ZVECTOR_END( regs );
-}
+}*/
 
 /*-------------------------------------------------------------------*/
 /* E7EB VFCH   - Vector FP Compare High                      [VRR-c] */
 /*-------------------------------------------------------------------*/
-DEF_INST( vector_fp_compare_high )
+/*DEF_INST(vector_fp_compare_high)
 {
     int     v1, v2, v3, m4, m5, m6;
 
@@ -4345,7 +4337,7 @@ DEF_INST( vector_fp_compare_high )
     if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
     //
     ZVECTOR_END( regs );
-}
+}*/
 
 /*-------------------------------------------------------------------*/
 /* E7F0 VAVGL  - Vector Average Logical                      [VRR-c] */
@@ -5104,7 +5096,7 @@ DEF_INST(vector_bit_permute)
 /*-------------------------------------------------------------------*/
 /* E79E VFNMS  - Vector FP Negative Multiply and Subtract    [VRR-e] */
 /*-------------------------------------------------------------------*/
-DEF_INST(vector_fp_negative_multiply_and_subtract)
+/*DEF_INST(vector_fp_negative_multiply_and_subtract)
 {
     int     v1, v2, v3, v4, m5, m6;
 
@@ -5118,12 +5110,12 @@ DEF_INST(vector_fp_negative_multiply_and_subtract)
     //
     ZVECTOR_END( regs );
 
-}
+}*/
 
 /*-------------------------------------------------------------------*/
 /* E79F VFNMA  - Vector FP Negative Multiply and Add         [VRR-e] */
 /*-------------------------------------------------------------------*/
-DEF_INST(vector_fp_negative_multiply_and_add)
+/*DEF_INST(vector_fp_negative_multiply_and_add)
 {
     int     v1, v2, v3, v4, m5, m6;
 
@@ -5137,7 +5129,7 @@ DEF_INST(vector_fp_negative_multiply_and_add)
     //
     ZVECTOR_END( regs );
 
-}
+}*/
 
 /*-------------------------------------------------------------------*/
 /* E7B8 VMSL   - Vector Multiply Sum Logical                 [VRR-d] */
@@ -5187,7 +5179,7 @@ DEF_INST(vector_multiply_sum_logical)
 /*-------------------------------------------------------------------*/
 /* E7EE VFMIN  - Vector FP Minimum                           [VRR-c] */
 /*-------------------------------------------------------------------*/
-DEF_INST(vector_fp_minimum)
+/*DEF_INST(vector_fp_minimum)
 {
     int     v1, v2, v3, v4, m5, m6;
 
@@ -5200,13 +5192,12 @@ DEF_INST(vector_fp_minimum)
     if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
     //
     ZVECTOR_END( regs );
-}
-
+}*/
 
 /*-------------------------------------------------------------------*/
 /* E7EF VFMAX  - Vector FP Maximum                           [VRR-c] */
 /*-------------------------------------------------------------------*/
-DEF_INST(vector_fp_maximum)
+/*DEF_INST(vector_fp_maximum)
 {
     int     v1, v2, v3, v4, m5, m6;
 
@@ -5219,9 +5210,16 @@ DEF_INST(vector_fp_maximum)
     if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
     //
     ZVECTOR_END( regs );
-}
+}*/
 
 #endif /* defined( FEATURE_135_ZVECTOR_ENH_FACILITY_1 ) */
+
+/* ============================================= */
+/* TEMPORARY while zvector.c is being developed */
+#if defined(__GNUC__)
+    #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#endif
+/* ============================================= */ 
 
 #if !defined( _GEN_ARCH )
 

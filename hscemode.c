@@ -2656,6 +2656,19 @@ int vr_cmd( int argc, char* argv[], char* cmdline )
                 return 0;
             }
 
+            if (argv[1][0] == '.')
+            {
+                if (sysblk.vrtrace) {
+                    sysblk.vrtrace = 0;
+                    WRMSG(HHC02266, "I", "Vector trace inactive");
+                }
+                else {
+                    sysblk.vrtrace = 1;
+                    WRMSG(HHC02266, "I", "Vector trace active");
+                }
+                release_lock( &sysblk.cpulock[ sysblk.pcpu ]);
+                return 0;
+            }
             if (0
                 || sscanf( argv[1], "%d%c%"SCNx64".%"SCNx64"%c",
                     &reg_num, &equal_sign,

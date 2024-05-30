@@ -1942,6 +1942,7 @@ DEF_INST( vector_shift_left_by_byte )
 DEF_INST( vector_shift_left_double_by_byte )
 {
     int     v1, v2, v3, i4, m5, shift, i;
+    U8      temp[32];
 
     VRI_D( inst, regs, v1, v2, v3, i4, m5 );
 
@@ -1950,8 +1951,12 @@ DEF_INST( vector_shift_left_double_by_byte )
     ZVECTOR_CHECK( regs );
 
     shift = i4 & 0xf;
+    for (i = 0; i < 16; i++) {
+        temp[i] = VR_UB(v2, i);
+        temp[i + 16] = VR_UB(v3, i);
+    }
     for (i=0; i < 16; i++) {
-        VR_UB(v1, i) = (i+shift) < 16 ? VR_UB(v2, i + shift) : VR_UB(v3, i+shift-16);
+        VR_UB(v1, i) = temp[i + shift];
     }
 
     ZVECTOR_END( regs );

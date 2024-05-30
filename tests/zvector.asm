@@ -164,7 +164,6 @@ test01   vl    v0,pattern
          vst   v1,have01
          vst   v0,have01+16
          vst   v2,have01+32
-         vsldb v2,v2,v2,8
          clc   have01,must01
          jne   failure
          j     test02
@@ -462,9 +461,35 @@ test22   vl    v2,data22
          vstrl v2,have22,15
          clc   have22,must22
          jne   failure
-         j     success
-data22   dc    x'006e0069006f00000000000000000000'
+         j     test23
+data22   dc    x'ae37a476e0c234716eeb0e6b02b28019'
 have22   ds    xl16
-must22   dc    x'6e696f0000000000ffffffffffffffff'
-*---------------------------------------------------------------------
+must22   dc    x'ae37a476e0c234716eeb0e6b02b28019'
+*- VMSL ---------------------------------------------------------------
+test23   vlm   v2,v4,data23
+         vmsl  v1,v2,v3,v4,3,0
+         vst   v1,have23
+         clc   have23,must23
+         jne   failure
+         j     test24
+data23   dc    x'0000000000000000',x'0000000000000002'
+         dc    x'0000000000000000',x'0000000000000004'
+         dc    x'0000000000000000',x'ffffffffffffffff'
+have23   ds    xl16
+must23   dc    x'0000000000000001',x'0000000000000007'
+*- VSLDB --------------------------------------------------------------
+test24   vl    v16,data24_1
+         vl    v18,data24_2
+         vsldb v16,v18,v16,9
+         vst   v16,have24
+         clc   have24,must24
+         jne   failure
+         j     success
+data24_1 dc    x'00000000005fc59c',x'216764b52cb34057'
+data24_2 dc    x'0000000000000000',x'0000000000000000'
+have24   ds    xl16
+must24   dc    x'0000000000000000',x'000000005fc59c21'
+*----------------------------------------------------------------------
          end
+			
+

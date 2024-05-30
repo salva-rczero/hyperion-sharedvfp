@@ -1226,6 +1226,8 @@ atomic_update64( &sysblk.txf_stats[ contran ? 1 : 0 ].txf_ ## ctr, +1 )
 
         unsigned int msglvl;            /* Message level             */
 
+        u_int   vrtrace:1;              /* Start zvector trace       */
+
 #define MLVL_VERBOSE 0x80000000         /* Show cfg file messages    */
 #define MLVL_DEBUG   0x40000000         /* Prefix w/filename(line#)  */
 #define MLVL_EMSGLOC 0x20000000         /* Show location of err msgs */

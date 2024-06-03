@@ -224,6 +224,7 @@ OPCD_DLL_IMPORT int iprint_router_func( int arch_mode, BYTE inst[], char mnemoni
 /*-------------------------------------------------------------------*/
 /*               Individual instruction counting                     */
 /*-------------------------------------------------------------------*/
+            /* gettimeofday(&sysblk.start_time, NULL);  */          
 
 #if defined( OPTION_INSTR_COUNT_AND_TIME )
 
@@ -233,7 +234,7 @@ OPCD_DLL_IMPORT int iprint_router_func( int arch_mode, BYTE inst[], char mnemoni
         if (sysblk.icount)                                          \
         {                                                           \
             U64 used;                                               \
-            gettimeofday(&sysblk.start_time, NULL);                 \
+            QueryPerformanceCounter(&(_regs)->ticks);               \
             switch ((_inst)[0]) {                                   \
             case 0x01:                                              \
                 used = sysblk.imaps.imap01[(_inst)[1]]++;           \
@@ -318,20 +319,23 @@ OPCD_DLL_IMPORT int iprint_router_func( int arch_mode, BYTE inst[], char mnemoni
 #endif // defined( OPTION_INSTR_COUNT_AND_TIME )
 
 #if defined( OPTION_INSTR_COUNT_AND_TIME )
+            /*                                                      \
+            struct timeval end_time;                                \
+            struct timeval dur;                                     \
+            gettimeofday(&end_time, NULL);                          \
+            timeval_subtract(&sysblk.start_time, &end_time, &dur);  \
+            elapsed_usecs = (dur.tv_sec * 1000000) + dur.tv_usec; */ 
 
 #define END_COUNT_INSTR(_inst, _regs)                               \
     do                                                              \
     {                                                               \
         if (sysblk.icount)                                          \
         {                                                           \
-            struct timeval end_time;                                \
-            struct timeval dur;                                     \
             U64 elapsed_usecs;                                      \
+            LARGE_INTEGER ticks;                                    \
                                                                     \
-            gettimeofday(&end_time, NULL);                          \
-            timeval_subtract(&sysblk.start_time, &end_time, &dur);  \
-            elapsed_usecs = (dur.tv_sec * 1000000) + dur.tv_usec;   \
-                                                                    \
+            QueryPerformanceCounter(&ticks);                        \
+            elapsed_usecs = ticks.QuadPart - (_regs)->ticks.QuadPart; \
             switch ((_inst)[0]) {                                   \
             case 0x01:                                              \
                 sysblk.imaps.imap01T[(_inst)[1]]+=elapsed_usecs;    \
@@ -3548,181 +3552,182 @@ DEF_INST(convert_dfp_long_to_packed);
 #endif
 
 #if defined( FEATURE_129_ZVECTOR_FACILITY )
-DEF_INST(vector_load_element_8);
-DEF_INST(vector_load_element_16);
-DEF_INST(vector_load_element_64);
-DEF_INST(vector_load_element_32);
-DEF_INST(vector_load_logical_element_and_zero);
-DEF_INST(vector_load_and_replicate);
-DEF_INST(vector_load);
-DEF_INST(vector_load_to_block_boundary);
-DEF_INST(vector_store_element_8);
-DEF_INST(vector_store_element_16);
-DEF_INST(vector_store_element_64);
-DEF_INST(vector_store_element_32);
-DEF_INST(vector_store);
-DEF_INST(vector_gather_element_64);
-DEF_INST(vector_gather_element_32);
-DEF_INST(vector_scatter_element_64);
-DEF_INST(vector_scatter_element_32);
-DEF_INST(vector_load_gr_from_vr_element);
-DEF_INST(vector_load_vr_element_from_gr);
-DEF_INST(load_count_to_block_boundary);
-DEF_INST(vector_element_shift_left);
-DEF_INST(vector_element_rotate_left_logical);
-DEF_INST(vector_load_multiple);
-DEF_INST(vector_load_with_length);
-DEF_INST(vector_element_shift_right_logical);
-DEF_INST(vector_element_shift_right_arithmetic);
-DEF_INST(vector_store_multiple);
-DEF_INST(vector_store_with_length);
-DEF_INST(vector_load_element_immediate_8);
-DEF_INST(vector_load_element_immediate_16);
-DEF_INST(vector_load_element_immediate_64);
-DEF_INST(vector_load_element_immediate_32);
-DEF_INST(vector_generate_byte_mask);
-DEF_INST(vector_replicate_immediate);
-DEF_INST(vector_generate_mask);
-DEF_INST(vector_fp_test_data_class_immediate);
-DEF_INST(vector_replicate);
-DEF_INST(vector_population_count);
-DEF_INST(vector_count_trailing_zeros);
-DEF_INST(vector_count_leading_zeros);
-DEF_INST(vector_load_vector);
-DEF_INST(vector_isolate_string);
-DEF_INST(vector_sign_extend_to_doubleword);
-DEF_INST(vector_merge_low);
-DEF_INST(vector_merge_high);
-DEF_INST(vector_load_vr_from_grs_disjoint);
-DEF_INST(vector_sum_across_word);
-DEF_INST(vector_sum_across_doubleword);
-DEF_INST(vector_checksum);
-DEF_INST(vector_sum_across_quadword);
-DEF_INST(vector_and);
-DEF_INST(vector_and_with_complement);
-DEF_INST(vector_or);
-DEF_INST(vector_nor);
-DEF_INST(vector_exclusive_or);
-DEF_INST(vector_element_shift_left_vector);
-DEF_INST(vector_element_rotate_and_insert_under_mask);
-DEF_INST(vector_element_rotate_left_logical_vector);
-DEF_INST(vector_shift_left);
-DEF_INST(vector_shift_left_by_byte);
-DEF_INST(vector_shift_left_double_by_byte);
-DEF_INST(vector_element_shift_right_logical_vector);
-DEF_INST(vector_element_shift_right_arithmetic_vector);
-DEF_INST(vector_shift_right_logical);
-DEF_INST(vector_shift_right_logical_by_byte);
-DEF_INST(vector_shift_right_arithmetic);
-DEF_INST(vector_shift_right_arithmetic_by_byte);
-DEF_INST(vector_find_element_equal);
-DEF_INST(vector_find_element_not_equal);
-DEF_INST(vector_find_any_element_equal);
-DEF_INST(vector_permute_doubleword_immediate);
-DEF_INST(vector_string_range_compare);
-DEF_INST(vector_permute);
-DEF_INST(vector_select);
-DEF_INST(vector_fp_multiply_and_subtract);
-DEF_INST(vector_fp_multiply_and_add);
-DEF_INST(vector_pack);
-DEF_INST(vector_pack_logical_saturate);
-DEF_INST(vector_pack_saturate);
-DEF_INST(vector_multiply_logical_high);
-DEF_INST(vector_multiply_low);
-DEF_INST(vector_multiply_high);
-DEF_INST(vector_multiply_logical_even);
-DEF_INST(vector_multiply_logical_odd);
-DEF_INST(vector_multiply_even);
-DEF_INST(vector_multiply_odd);
-DEF_INST(vector_multiply_and_add_logical_high);
-DEF_INST(vector_multiply_and_add_low);
-DEF_INST(vector_multiply_and_add_high);
-DEF_INST(vector_multiply_and_add_logical_even);
-DEF_INST(vector_multiply_and_add_logical_odd);
-DEF_INST(vector_multiply_and_add_even);
-DEF_INST(vector_multiply_and_add_odd);
-DEF_INST(vector_galois_field_multiply_sum);
-DEF_INST(vector_add_with_carry_compute_carry);
-DEF_INST(vector_add_with_carry);
-DEF_INST(vector_galois_field_multiply_sum_and_accumulate);
-DEF_INST(vector_subtract_with_borrow_compute_borrow_indication);
-DEF_INST(vector_subtract_with_borrow_indication);
-DEF_INST(vector_fp_convert_to_logical);
-DEF_INST(vector_fp_convert_from_logical);
-DEF_INST(vector_fp_convert_to_fixed);
-DEF_INST(vector_fp_convert_from_fixed);
-DEF_INST(vector_fp_load_lengthened);
-DEF_INST(vector_fp_load_rounded);
-DEF_INST(vector_load_fp_integer);
-DEF_INST(vector_fp_compare_and_signal_scalar);
-DEF_INST(vector_fp_compare_scalar);
-DEF_INST(vector_fp_perform_sign_operation);
-DEF_INST(vector_fp_square_root);
-DEF_INST(vector_unpack_logical_low);
-DEF_INST(vector_unpack_logical_high);
-DEF_INST(vector_unpack_low);
-DEF_INST(vector_unpack_high);
-DEF_INST(vector_test_under_mask);
-DEF_INST(vector_element_compare_logical);
-DEF_INST(vector_element_compare);
-DEF_INST(vector_load_complement);
-DEF_INST(vector_load_positive);
-DEF_INST(vector_fp_subtract);
-DEF_INST(vector_fp_add);
-DEF_INST(vector_fp_divide);
-DEF_INST(vector_fp_multiply);
-DEF_INST(vector_fp_compare_equal);
-DEF_INST(vector_fp_compare_high_or_equal);
-DEF_INST(vector_fp_compare_high);
-DEF_INST(vector_average_logical);
-DEF_INST(vector_add_compute_carry);
-DEF_INST(vector_average);
-DEF_INST(vector_add);
-DEF_INST(vector_subtract_compute_borrow_indication);
-DEF_INST(vector_subtract);
-DEF_INST(vector_compare_equal);
-DEF_INST(vector_compare_high_logical);
-DEF_INST(vector_compare_high);
-DEF_INST(vector_minimum_logical);
-DEF_INST(vector_maximum_logical);
-DEF_INST(vector_minimum);
-DEF_INST(vector_maximum);
+DEF_INST( vector_load_element_8 );
+DEF_INST( vector_load_element_16 );
+DEF_INST( vector_load_element_64 );
+DEF_INST( vector_load_element_32 );
+DEF_INST( vector_load_logical_element_and_zero );
+DEF_INST( vector_load_and_replicate );
+DEF_INST( vector_load );
+DEF_INST( vector_load_to_block_boundary );
+DEF_INST( vector_store_element_8 );
+DEF_INST( vector_store_element_16 );
+DEF_INST( vector_store_element_64 );
+DEF_INST( vector_store_element_32 );
+DEF_INST( vector_store );
+DEF_INST( vector_gather_element_64 );
+DEF_INST( vector_gather_element_32 );
+DEF_INST( vector_scatter_element_64 );
+DEF_INST( vector_scatter_element_32 );
+DEF_INST( vector_load_gr_from_vr_element );
+DEF_INST( vector_load_vr_element_from_gr );
+DEF_INST( load_count_to_block_boundary );
+DEF_INST( vector_element_shift_left );
+DEF_INST( vector_element_rotate_left_logical );
+DEF_INST( vector_load_multiple );
+DEF_INST( vector_load_with_length );
+DEF_INST( vector_element_shift_right_logical );
+DEF_INST( vector_element_shift_right_arithmetic );
+DEF_INST( vector_store_multiple );
+DEF_INST( vector_store_with_length );
+DEF_INST( vector_load_element_immediate_8 );
+DEF_INST( vector_load_element_immediate_16 );
+DEF_INST( vector_load_element_immediate_64 );
+DEF_INST( vector_load_element_immediate_32 );
+DEF_INST( vector_generate_byte_mask );
+DEF_INST( vector_replicate_immediate );
+DEF_INST( vector_generate_mask );
+DEF_INST( vector_fp_test_data_class_immediate );
+DEF_INST( vector_replicate );
+DEF_INST( vector_population_count );
+DEF_INST( vector_count_trailing_zeros );
+DEF_INST( vector_count_leading_zeros );
+DEF_INST( vector_load_vector );
+DEF_INST( vector_isolate_string );
+DEF_INST( vector_sign_extend_to_doubleword );
+DEF_INST( vector_merge_low );
+DEF_INST( vector_merge_high );
+DEF_INST( vector_load_vr_from_grs_disjoint );
+DEF_INST( vector_sum_across_word );
+DEF_INST( vector_sum_across_doubleword );
+DEF_INST( vector_checksum );
+DEF_INST( vector_sum_across_quadword );
+DEF_INST( vector_and );
+DEF_INST( vector_and_with_complement );
+DEF_INST( vector_or );
+DEF_INST( vector_nor );
+DEF_INST( vector_exclusive_or );
+DEF_INST( vector_element_shift_left_vector );
+DEF_INST( vector_element_rotate_and_insert_under_mask );
+DEF_INST( vector_element_rotate_left_logical_vector );
+DEF_INST( vector_shift_left );
+DEF_INST( vector_shift_left_by_byte );
+DEF_INST( vector_shift_left_double_by_byte );
+DEF_INST( vector_element_shift_right_logical_vector );
+DEF_INST( vector_element_shift_right_arithmetic_vector );
+DEF_INST( vector_shift_right_logical );
+DEF_INST( vector_shift_right_logical_by_byte );
+DEF_INST( vector_shift_right_arithmetic );
+DEF_INST( vector_shift_right_arithmetic_by_byte );
+DEF_INST( vector_find_element_equal );
+DEF_INST( vector_find_element_not_equal );
+DEF_INST( vector_find_any_element_equal );
+DEF_INST( vector_permute_doubleword_immediate );
+DEF_INST( vector_string_range_compare );
+DEF_INST( vector_permute );
+DEF_INST( vector_select );
+DEF_INST( vector_fp_multiply_and_subtract );
+DEF_INST( vector_fp_multiply_and_add );
+DEF_INST( vector_pack );
+DEF_INST( vector_pack_logical_saturate );
+DEF_INST( vector_pack_saturate );
+DEF_INST( vector_multiply_logical_high );
+DEF_INST( vector_multiply_low );
+DEF_INST( vector_multiply_high );
+DEF_INST( vector_multiply_logical_even );
+DEF_INST( vector_multiply_logical_odd );
+DEF_INST( vector_multiply_even );
+DEF_INST( vector_multiply_odd );
+DEF_INST( vector_multiply_and_add_logical_high );
+DEF_INST( vector_multiply_and_add_low );
+DEF_INST( vector_multiply_and_add_high );
+DEF_INST( vector_multiply_and_add_logical_even );
+DEF_INST( vector_multiply_and_add_logical_odd );
+DEF_INST( vector_multiply_and_add_even );
+DEF_INST( vector_multiply_and_add_odd );
+DEF_INST( vector_galois_field_multiply_sum );
+DEF_INST( vector_add_with_carry_compute_carry );
+DEF_INST( vector_add_with_carry );
+DEF_INST( vector_galois_field_multiply_sum_and_accumulate );
+DEF_INST( vector_subtract_with_borrow_compute_borrow_indication );
+DEF_INST( vector_subtract_with_borrow_indication );
+DEF_INST( vector_fp_convert_to_logical );
+DEF_INST( vector_fp_convert_from_logical );
+DEF_INST( vector_fp_convert_to_fixed );
+DEF_INST( vector_fp_convert_from_fixed );
+DEF_INST( vector_fp_load_lengthened );
+DEF_INST( vector_fp_load_rounded );
+DEF_INST( vector_load_fp_integer );
+DEF_INST( vector_fp_compare_and_signal_scalar );
+DEF_INST( vector_fp_compare_scalar );
+DEF_INST( vector_fp_perform_sign_operation );
+DEF_INST( vector_fp_square_root );
+DEF_INST( vector_unpack_logical_low );
+DEF_INST( vector_unpack_logical_high );
+DEF_INST( vector_unpack_low );
+DEF_INST( vector_unpack_high );
+DEF_INST( vector_test_under_mask );
+DEF_INST( vector_element_compare_logical );
+DEF_INST( vector_element_compare );
+DEF_INST( vector_load_complement );
+DEF_INST( vector_load_positive );
+DEF_INST( vector_fp_subtract );
+DEF_INST( vector_fp_add );
+DEF_INST( vector_fp_divide );
+DEF_INST( vector_fp_multiply );
+DEF_INST( vector_fp_compare_equal );
+DEF_INST( vector_fp_compare_high_or_equal );
+DEF_INST( vector_fp_compare_high );
+DEF_INST( vector_average_logical );
+DEF_INST( vector_add_compute_carry );
+DEF_INST( vector_average );
+DEF_INST( vector_add );
+DEF_INST( vector_subtract_compute_borrow_indication );
+DEF_INST( vector_subtract );
+DEF_INST( vector_compare_equal );
+DEF_INST( vector_compare_high_logical );
+DEF_INST( vector_compare_high );
+DEF_INST( vector_minimum_logical );
+DEF_INST( vector_maximum_logical );
+DEF_INST( vector_minimum );
+DEF_INST( vector_maximum );
 #endif
 
 #if defined(FEATURE_134_ZVECTOR_PACK_DEC_FACILITY)
-DEF_INST(vector_packed_zoned);
-DEF_INST(vector_load_rightmost_with_length);
-DEF_INST(vector_unpack_zoned);
-DEF_INST(vector_store_rightmost_with_length);
-DEF_INST(vector_load_immediate_decimal);
-DEF_INST(vector_convert_to_binary_32);
-DEF_INST(vector_convert_to_binary_64);
-DEF_INST(vector_convert_to_decimal_32);
-DEF_INST(vector_convert_to_decimal_64);
-DEF_INST(vector_perform_sign_operation_decimal);
-DEF_INST(vector_test_decimal);
-DEF_INST(vector_add_decimal);
-DEF_INST(vector_shift_and_round_decimal);
-DEF_INST(vector_shift_and_round_decimal_register);
-DEF_INST(vector_subtract_decimal);
-DEF_INST(vector_compare_decimal);
-DEF_INST(vector_multiply_decimal);
-DEF_INST(vector_multiply_and_shift_decimal);
-DEF_INST(vector_divide_decimal);
-DEF_INST(vector_remainder_decimal);
-DEF_INST(vector_shift_and_divide_decimal);
+DEF_INST( vector_add_decimal );
+DEF_INST( vector_compare_decimal );
+DEF_INST( vector_convert_to_binary_32 );
+DEF_INST( vector_convert_to_binary_64 );
+DEF_INST( vector_convert_to_decimal_32 );
+DEF_INST( vector_convert_to_decimal_64 );
+DEF_INST( vector_divide_decimal );
+DEF_INST( vector_load_immediate_decimal );
+DEF_INST( vector_load_rightmost_with_length );
+DEF_INST( vector_load_rightmost_with_length_reg );
+DEF_INST( vector_multiply_and_shift_decimal );
+DEF_INST( vector_multiply_decimal );
+DEF_INST( vector_pack_zoned );
+DEF_INST( vector_perform_sign_operation_decimal );
+DEF_INST( vector_remainder_decimal );
+DEF_INST( vector_shift_and_divide_decimal );
+DEF_INST( vector_shift_and_round_decimal );
+DEF_INST( vector_store_rightmost_with_length );
+DEF_INST( vector_store_rightmost_with_length_reg );
+DEF_INST( vector_subtract_decimal );
+DEF_INST( vector_test_decimal );
+DEF_INST( vector_unpack_zoned );
 #endif
 
 #if defined( FEATURE_135_ZVECTOR_ENH_FACILITY_1 )
-DEF_INST(vector_not_exclusive_or);
-DEF_INST(vector_nand);
-DEF_INST(vector_or_with_complement);
-DEF_INST(vector_bit_permute);
-DEF_INST(vector_fp_negative_multiply_and_subtract);
-DEF_INST(vector_fp_negative_multiply_and_add);
-DEF_INST(vector_multiply_sum_logical);
-DEF_INST(vector_fp_minimum);
-DEF_INST(vector_fp_maximum);
+DEF_INST( vector_not_exclusive_or );
+DEF_INST( vector_nand );
+DEF_INST( vector_or_with_complement );
+DEF_INST( vector_bit_permute );
+DEF_INST( vector_fp_negative_multiply_and_subtract );
+DEF_INST( vector_fp_negative_multiply_and_add );
+DEF_INST( vector_multiply_sum_logical );
+DEF_INST( vector_fp_minimum );
+DEF_INST( vector_fp_maximum );
 #endif
 
 #if defined( FEATURE_145_INS_REF_BITS_MULT_FACILITY )
@@ -3730,41 +3735,40 @@ DEF_INST( insert_reference_bits_multiple );
 #endif
 
 #if defined( FEATURE_148_VECTOR_ENH_FACILITY_2 )
-DEF_INST(vector_load_byte_reversed_element_16);
-DEF_INST(vector_load_byte_reversed_element_64);
-DEF_INST(vector_load_byte_reversed_element_32);
-DEF_INST(vector_load_byte_reversed_and_zero);
-DEF_INST(vector_load_byte_reversed_and_replicate);
-DEF_INST(vector_load_byte_reversed_elements);
-DEF_INST(vector_load_elements_reversed);
-DEF_INST(vector_store_byte_reversed_element_16);
-DEF_INST(vector_store_byte_reversed_element_64);
-DEF_INST(vector_store_byte_reversed_element_32);
-DEF_INST(vector_store_byte_reversed_elements);
-DEF_INST(vector_store_reversed_elements);
-#endif
-
-#if defined(FEATURE_152_VECT_PACKDEC_ENH_FACILITY)
-DEF_INST(vector_load_rightmost_with_length_reg);
-DEF_INST(vector_store_rightmost_with_length_reg);
+DEF_INST( vector_load_byte_reversed_element_16 );
+DEF_INST( vector_load_byte_reversed_element_64 );
+DEF_INST( vector_load_byte_reversed_element_32 );
+DEF_INST( vector_load_byte_reversed_and_zero );
+DEF_INST( vector_load_byte_reversed_and_replicate );
+DEF_INST( vector_load_byte_reversed_elements );
+DEF_INST( vector_load_elements_reversed );
+DEF_INST( vector_store_byte_reversed_element_16 );
+DEF_INST( vector_store_byte_reversed_element_64 );
+DEF_INST( vector_store_byte_reversed_element_32 );
+DEF_INST( vector_store_byte_reversed_elements );
+DEF_INST( vector_store_reversed_elements );
+DEF_INST( vector_shift_left_double_by_bit );
+DEF_INST( vector_shift_right_double_by_bit );
+DEF_INST( vector_string_search );
 #endif
 
 #if defined(FEATURE_165_NNET_ASSIST_FACILITY)
-DEF_INST(vector_fp_convert_nnp);
-DEF_INST(vector_fp_convert_and_lengthen_from_nnp_high);
-DEF_INST(vector_fp_convert_from_nnp);
-DEF_INST(vector_fp_convert_and_lengthen_from_nnp_low);
-DEF_INST(vector_fp_convert_and_round_to_nnp);
+DEF_INST( vector_fp_convert_nnp );
+DEF_INST( vector_fp_convert_and_lengthen_from_nnp_high );
+DEF_INST( vector_fp_convert_from_nnp );
+DEF_INST( vector_fp_convert_and_lengthen_from_nnp_low );
+DEF_INST( vector_fp_convert_and_round_to_nnp );
 #endif
 
 #if defined(FEATURE_192_VECT_PACKDEC_ENH_2_FACILITY)
-DEF_INST(vector_count_leading_zero_digits);
-DEF_INST(vector_unpack_zoned_high);
-DEF_INST(vector_unpack_zoned_low);
-DEF_INST(vector_pack_zoned_register);
-DEF_INST(decimal_scale_and_convert_to_hfp);
-DEF_INST(decimal_scale_and_convert_and_split_to_hfp);
-DEF_INST(vector_convert_hfp_to_scaled_decimal);
+DEF_INST( vector_count_leading_zero_digits );
+DEF_INST( vector_unpack_zoned_high );
+DEF_INST( vector_unpack_zoned_low );
+DEF_INST( vector_pack_zoned_register );
+DEF_INST( vector_shift_and_round_decimal_register );
+DEF_INST( decimal_scale_and_convert_to_hfp );
+DEF_INST( decimal_scale_and_convert_and_split_to_hfp );
+DEF_INST( vector_convert_hfp_to_scaled_decimal );
 #endif
 
 #if defined( FEATURE_193_BEAR_ENH_FACILITY )

@@ -484,11 +484,22 @@ test24   vl    v16,data24_1
          vst   v16,have24
          clc   have24,must24
          jne   failure
-         j     success
+         j     test25
 data24_1 dc    x'00000000005fc59c',x'216764b52cb34057'
 data24_2 dc    x'0000000000000000',x'0000000000000000'
 have24   ds    xl16
 must24   dc    x'0000000000000000',x'000000005fc59c21'
+*- VSLD ---------------------------------------------------------------
+test25   vlm   v2,v3,data25
+         vsld  v1,v2,v3,4
+         vst   v1,have25
+         clc   have25,must25
+         jne   failure
+         j     success
+data25   dc    x'0123456789abcdef',x'fedcba9876543210'
+         dc    x'f0e1d2c3b4a59687',x'78695a4b3c2d1e0a'
+have25   ds    xl16
+must25   dc    x'123456789abcdeff',x'edcba9876543210f'
 *----------------------------------------------------------------------
          end
 			

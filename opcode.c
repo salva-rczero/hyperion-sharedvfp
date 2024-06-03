@@ -572,7 +572,7 @@ DISABLE_GCC_UNUSED_FUNCTION_WARNING;
 #endif
 
 #if !defined( FEATURE_049_PROCESSOR_ASSIST_FACILITY )
- UNDEF_INST( perform_processor_assist );
+ UNDEF_INST( perform_processor_assist )
 #endif
 
 #if !defined( FEATURE_050_CONSTR_TRANSACT_FACILITY )
@@ -580,18 +580,18 @@ DISABLE_GCC_UNUSED_FUNCTION_WARNING;
 #endif
 
 #if !defined( FEATURE_053_LOAD_STORE_ON_COND_FACILITY_2 )
- UNDEF_INST( load_halfword_high_immediate_on_condition );
- UNDEF_INST( load_halfword_immediate_on_condition );
- UNDEF_INST( load_halfword_immediate_on_condition_grande );
- UNDEF_INST( load_high_on_condition );
- UNDEF_INST( load_high_on_condition_register );
- UNDEF_INST( store_high_on_condition );
+ UNDEF_INST( load_halfword_high_immediate_on_condition )
+ UNDEF_INST( load_halfword_immediate_on_condition )
+ UNDEF_INST( load_halfword_immediate_on_condition_grande )
+ UNDEF_INST( load_high_on_condition )
+ UNDEF_INST( load_high_on_condition_register )
+ UNDEF_INST( store_high_on_condition )
 #endif
 
 #if !defined( FEATURE_053_LOAD_ZERO_RIGHTMOST_FACILITY )
- UNDEF_INST( load_and_zero_rightmost_byte_grande );
- UNDEF_INST( load_logical_and_zero_rightmost_byte );
- UNDEF_INST( load_and_zero_rightmost_byte );
+ UNDEF_INST( load_and_zero_rightmost_byte_grande )
+ UNDEF_INST( load_logical_and_zero_rightmost_byte )
+ UNDEF_INST( load_and_zero_rightmost_byte )
 #endif
 
 #if !defined( FEATURE_058_MISC_INSTR_EXT_FACILITY_2 )
@@ -817,36 +817,40 @@ DISABLE_GCC_UNUSED_FUNCTION_WARNING;
 #endif
 
 #if !defined(FEATURE_134_ZVECTOR_PACK_DEC_FACILITY)
-     UNDEF_INST(vector_packed_zoned)
-     UNDEF_INST(vector_load_rightmost_with_length)
-     UNDEF_INST(vector_unpack_zoned)
-     UNDEF_INST(vector_store_rightmost_with_length)
-     UNDEF_INST(vector_load_immediate_decimal)
+     UNDEF_INST(vector_add_decimal)
+     UNDEF_INST(vector_compare_decimal)
      UNDEF_INST(vector_convert_to_binary_32)
      UNDEF_INST(vector_convert_to_binary_64)
      UNDEF_INST(vector_convert_to_decimal_32)
-     UNDEF_INST(vector_test_decimal)
-     UNDEF_INST(vector_add_decimal)
-     UNDEF_INST(vector_shift_and_round_decimal_register)
-     UNDEF_INST(vector_subtract_decimal)
-     UNDEF_INST(vector_compare_decimal)
-     UNDEF_INST(vector_multiply_decimal)
-     UNDEF_INST(vector_multiply_and_shift_decimal)
+     UNDEF_INST(vector_convert_to_decimal_64)
      UNDEF_INST(vector_divide_decimal)
+     UNDEF_INST(vector_load_immediate_decimal)
+     UNDEF_INST(vector_load_rightmost_with_length)
+     UNDEF_INST(vector_load_rightmost_with_length_reg)
+     UNDEF_INST(vector_multiply_and_shift_decimal)
+     UNDEF_INST(vector_multiply_decimal)
+     UNDEF_INST(vector_pack_zoned)
+     UNDEF_INST(vector_perform_sign_operation_decimal)
      UNDEF_INST(vector_remainder_decimal)
      UNDEF_INST(vector_shift_and_divide_decimal)
+     UNDEF_INST(vector_shift_and_round_decimal)
+     UNDEF_INST(vector_store_rightmost_with_length)
+     UNDEF_INST(vector_store_rightmost_with_length_reg)
+     UNDEF_INST(vector_subtract_decimal)
+     UNDEF_INST(vector_test_decimal)
+     UNDEF_INST(vector_unpack_zoned)
 #endif
 
 #if !defined( FEATURE_135_ZVECTOR_ENH_FACILITY_1 )
- UNDEF_INST(vector_not_exclusive_or);
- UNDEF_INST(vector_nand);
- UNDEF_INST(vector_or_with_complement);
- UNDEF_INST(vector_bit_permute);
- UNDEF_INST(vector_fp_negative_multiply_and_subtract);
- UNDEF_INST(vector_fp_negative_multiply_and_add);
- UNDEF_INST(vector_multiply_sum_logical);
- UNDEF_INST(vector_fp_minimum);
- UNDEF_INST(vector_fp_maximum);
+ UNDEF_INST(vector_not_exclusive_or)
+ UNDEF_INST(vector_nand)
+ UNDEF_INST(vector_or_with_complement)
+ UNDEF_INST(vector_bit_permute)
+ UNDEF_INST(vector_fp_negative_multiply_and_subtract)
+ UNDEF_INST(vector_fp_negative_multiply_and_add)
+ UNDEF_INST(vector_multiply_sum_logical)
+ UNDEF_INST(vector_fp_minimum)
+ UNDEF_INST(vector_fp_maximum)
 #endif
 
 #if !defined( FEATURE_145_INS_REF_BITS_MULT_FACILITY )
@@ -866,14 +870,9 @@ DISABLE_GCC_UNUSED_FUNCTION_WARNING;
      UNDEF_INST(vector_store_byte_reversed_element_32)
      UNDEF_INST(vector_store_byte_reversed_elements)
      UNDEF_INST(vector_store_reversed_elements)
-     UNDEF_INST(vector_shift_and_round_decimal)
-     UNDEF_INST(vector_convert_to_decimal_64)
-     UNDEF_INST(vector_perform_sign_operation_decimal)
-#endif
-
-#if !defined(FEATURE_152_VECT_PACKDEC_ENH_FACILITY)
-     UNDEF_INST(vector_load_rightmost_with_length_reg)
-     UNDEF_INST(vector_store_rightmost_with_length_reg)
+     UNDEF_INST(vector_shift_left_double_by_bit)
+     UNDEF_INST(vector_shift_right_double_by_bit)
+     UNDEF_INST(vector_string_search)
 #endif
 
 #if !defined(FEATURE_165_NNET_ASSIST_FACILITY)
@@ -889,6 +888,7 @@ DISABLE_GCC_UNUSED_FUNCTION_WARNING;
      UNDEF_INST(vector_unpack_zoned_high)
      UNDEF_INST(vector_unpack_zoned_low)
      UNDEF_INST(vector_pack_zoned_register)
+     UNDEF_INST(vector_shift_and_round_decimal_register)
      UNDEF_INST(decimal_scale_and_convert_to_hfp)
      UNDEF_INST(decimal_scale_and_convert_and_split_to_hfp)
      UNDEF_INST(vector_convert_hfp_to_scaled_decimal)
@@ -2139,7 +2139,7 @@ static INSTR_FUNC ARCH_DEP( gen_opcode_e6xx )[256][NUM_INSTR_TAB_PTRS] =
  /*E631*/ AD_GENx___x___x___ ,
  /*E632*/ AD_GENx___x___x___ ,
  /*E633*/ AD_GENx___x___x___ ,
- /*E634*/ AD_GENx___x___x900 ("VPKZ"     , VSI    , ASMFMT_VSI    , vector_packed_zoned                                   ),
+ /*E634*/ AD_GENx___x___x900 ("VPKZ"     , VSI    , ASMFMT_VSI    , vector_pack_zoned                                     ),
  /*E635*/ AD_GENx___x___x900 ("VLRL"     , VSI    , ASMFMT_VSI    , vector_load_rightmost_with_length                     ),
  /*E636*/ AD_GENx___x___x___ ,
  /*E637*/ AD_GENx___x___x900 ("VLRLR"    , VRS_D  , ASMFMT_VRS_D  , vector_load_rightmost_with_length_reg                 ),
@@ -5336,7 +5336,7 @@ static INSTR_FUNC gen_opcode_e7xx[256][NUM_INSTR_TAB_PTRS] =
  /*E783*/ GENx___x___x___ ,
  /*E784*/ GENx___x___x900("VPDI"   , VRR_C  , ASMFMT_VRR_C  , vector_permute_doubleword_immediate                      ),
  /*E785*/ GENx___x___x900("VBPERM" , VRR_C  , ASMFMT_VRR_C  , vector_bit_permute                                       ),
- /*E786*/ GENx___x___x___ ,
+ /*E786*/ GENx___x___x900("VSLD"   , VRI_D  , ASMFMT_VRI_D  , vector_shift_left_double_by_bit                          ),
  /*E787*/ GENx___x___x___ ,
  /*E788*/ GENx___x___x___ ,
  /*E789*/ GENx___x___x___ ,
@@ -5394,10 +5394,10 @@ static INSTR_FUNC gen_opcode_e7xx[256][NUM_INSTR_TAB_PTRS] =
  /*E7BD*/ GENx___x___x900("VSBCBI" , VRR_D  , ASMFMT_VRR_D  , vector_subtract_with_borrow_compute_borrow_indication    ),
  /*E7BE*/ GENx___x___x___ ,
  /*E7BF*/ GENx___x___x900("VSBI"   , VRR_D  , ASMFMT_VRR_D  , vector_subtract_with_borrow_indication                   ),
- /*E7C0*/ GENx___x___x900("VCLGD"  , VRR_A  , ASMFMT_VRR_A  , vector_fp_convert_to_logical                             ),
- /*E7C1*/ GENx___x___x900("VCDLG"  , VRR_A  , ASMFMT_VRR_A  , vector_fp_convert_from_logical                           ),
- /*E7C2*/ GENx___x___x900("VCGD"   , VRR_A  , ASMFMT_VRR_A  , vector_fp_convert_to_fixed                               ),
- /*E7C3*/ GENx___x___x900("VCDG"   , VRR_A  , ASMFMT_VRR_A  , vector_fp_convert_from_fixed                             ),
+ /*E7C0*/ GENx___x___x900("VCLFP"  , VRR_A  , ASMFMT_VRR_A  , vector_fp_convert_to_logical                             ),
+ /*E7C1*/ GENx___x___x900("VCFPL"  , VRR_A  , ASMFMT_VRR_A  , vector_fp_convert_from_logical                           ),
+ /*E7C2*/ GENx___x___x900("VCSFP"  , VRR_A  , ASMFMT_VRR_A  , vector_fp_convert_to_fixed                               ),
+ /*E7C3*/ GENx___x___x900("VCFPS"  , VRR_A  , ASMFMT_VRR_A  , vector_fp_convert_from_fixed                             ),
  /*E7C4*/ GENx___x___x900("VFLL"   , VRR_A  , ASMFMT_VRR_A  , vector_fp_load_lengthened                                ),
  /*E7C5*/ GENx___x___x900("VFLR"   , VRR_A  , ASMFMT_VRR_A  , vector_fp_load_rounded                                   ),
  /*E7C6*/ GENx___x___x___ ,

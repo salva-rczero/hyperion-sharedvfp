@@ -113,7 +113,7 @@ DEF_INST( vector_load_logical_element_and_zero )
     PER_ZEROADDR_XCHECK2( regs, x2, b2 );
 
 #if defined(_M_X64) || defined( __SSE2__ )
-    VR_UQ(v1).v = _mm_setzero_si128();
+    VR_UV(v1) = _mm_setzero_si128();
 #else
     VR_UD(v1, 0) = 0;
     VR_UD(v1, 1) = 0;
@@ -1646,8 +1646,12 @@ DEF_INST( vector_and )
 
     ZVECTOR_CHECK( regs );
 
+#if defined(_M_X64) || defined( __SSE2__ )
+    VR_UV(v1) = _mm_and_si128(VR_UV(v2), VR_UV(v3));
+#else
     VR_UD(v1, 0) = VR_UD(v2, 0) & VR_UD(v3, 0);
     VR_UD(v1, 1) = VR_UD(v2, 1) & VR_UD(v3, 1);
+#endif
     
     ZVECTOR_END( regs );
 }
@@ -1667,8 +1671,12 @@ DEF_INST( vector_and_with_complement )
 
     ZVECTOR_CHECK( regs );
 
+#if defined(_M_X64) || defined( __SSE2__ )
+    VR_UV(v1) = _mm_andnot_si128(VR_UV(v3), VR_UV(v2));
+#else
     VR_UD(v1, 0) = VR_UD(v2, 0) & ~VR_UD(v3, 0);
     VR_UD(v1, 1) = VR_UD(v2, 1) & ~VR_UD(v3, 1);
+#endif
 
     ZVECTOR_END( regs );
 }
@@ -1688,8 +1696,12 @@ DEF_INST( vector_or )
 
     ZVECTOR_CHECK( regs );
 
+#if defined(_M_X64) || defined( __SSE2__ )
+    VR_UV(v1) = _mm_or_si128(VR_UV(v2), VR_UV(v3));
+#else
     VR_UD(v1, 0) = VR_UD(v2, 0) | VR_UD(v3, 0);
     VR_UD(v1, 1) = VR_UD(v2, 1) | VR_UD(v3, 1);
+#endif
 
     ZVECTOR_END( regs );
 }
@@ -1730,8 +1742,12 @@ DEF_INST( vector_exclusive_or )
 
     ZVECTOR_CHECK( regs );
 
+#if defined(_M_X64) || defined( __SSE2__ )
+    VR_UV(v1) = _mm_xor_si128(VR_UV(v2), VR_UV(v3));
+#else
     VR_UD(v1, 0) = VR_UD(v2, 0) ^ VR_UD(v3, 0);
     VR_UD(v1, 1) = VR_UD(v2, 1) ^ VR_UD(v3, 1);
+#endif
 
     ZVECTOR_END( regs );
 }
@@ -3378,7 +3394,8 @@ DEF_INST( vector_galois_field_multiply_sum )
             U64 a = VR_UB(v2, i);
             U64 b = VR_UB(v3, i);
             result = _mm_clmulepi64_si128(_mm_set_epi64x(0, a), _mm_set_epi64x(0, b), 0);
-            tempH[i] = _mm_cvtsi128_si16(result);
+            // tempH[i] = _mm_cvtsi128_si16(result); AVX512_FP16
+            tempH[i] = _mm_cvtsi128_si32(result);
         }
         for (i=0; i < 8; i++) {
             VR_UH(v1, i) = tempH[i * 2] ^ tempH[i * 2 + 1];
@@ -3415,7 +3432,7 @@ DEF_INST( vector_galois_field_multiply_sum )
             U64 b = VR_UD(v3, i);
             tempQ[i] = _mm_clmulepi64_si128(_mm_set_epi64x(0, a), _mm_set_epi64x(0, b), 0);
         }
-        VR_UQ(v1).v = _mm_xor_si128(tempQ[0], tempQ[1]);
+        VR_UV(v1) = _mm_xor_si128(tempQ[0], tempQ[1]);
         break;
     default:
         ARCH_DEP(program_interrupt) (regs, PGM_SPECIFICATION_EXCEPTION);
@@ -3519,7 +3536,8 @@ DEF_INST( vector_galois_field_multiply_sum_and_accumulate )
             U64 a = VR_UB(v2, i);
             U64 b = VR_UB(v3, i);
             result = _mm_clmulepi64_si128(_mm_set_epi64x(0, a), _mm_set_epi64x(0, b), 0);
-            tempH[i] = _mm_cvtsi128_si16(result);  
+            // tempH[i] = _mm_cvtsi128_si16(result); AVX512_FP16
+            tempH[i] = _mm_cvtsi128_si32(result);
         }
         for (i=0; i < 8; i++) {
             VR_UH(v1, i) = tempH[i*2] ^ tempH[i*2 + 1] ^ VR_UH(v4, i);
@@ -3556,9 +3574,7 @@ DEF_INST( vector_galois_field_multiply_sum_and_accumulate )
             U64 b = VR_UD(v3, i);
             tempQ[i] = _mm_clmulepi64_si128(_mm_set_epi64x(0, a), _mm_set_epi64x(0, b), 0);
         }
-        result = _mm_set_epi64x(VR_UD(v4,0), VR_UD(v4, 1));
-        result = _mm_xor_si128(result, tempQ[0]);
-        VR_UQ(v1).v = _mm_xor_si128(result, tempQ[1]);
+        VR_UV(v1) = _mm_xor_si128(_mm_xor_si128(VR_UV(v4), tempQ[0]), tempQ[1]);
         break;
     default:
         ARCH_DEP(program_interrupt) (regs, PGM_SPECIFICATION_EXCEPTION);
@@ -4708,7 +4724,7 @@ DEF_INST( vector_compare_equal )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_compare_high_logical )
 {
-    int     v1, v2, v3, m4, m5, i, max, sel;
+    int     v1, v2, v3, m4, m5, i, max = 0, sel = 0;
 
     VRR_B( inst, regs, v1, v2, v3, m4, m5 );
 
@@ -4782,7 +4798,7 @@ DEF_INST( vector_compare_high_logical )
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_compare_high )
 {
-    int     v1, v2, v3, m4, m5, i, max, sel;
+    int     v1, v2, v3, m4, m5, i, max = 0, sel = 0;
 
     VRR_B( inst, regs, v1, v2, v3, m4, m5 );
 
@@ -5218,6 +5234,39 @@ DEF_INST(vector_multiply_sum_logical)
 }*/
 
 #endif /* defined( FEATURE_135_ZVECTOR_ENH_FACILITY_1 ) */
+
+#if defined( FEATURE_148_VECTOR_ENH_FACILITY_2 )
+
+/*-------------------------------------------------------------------*/
+/* E786 VSLD   - Vector Shift Left Double By Bit             [VRI-d] */
+/*-------------------------------------------------------------------*/
+DEF_INST( vector_shift_left_double_by_bit )
+{
+    int     v1, v2, v3, i4, m5, shift, i;
+    U8      temp[32];
+
+    VRI_D( inst, regs, v1, v2, v3, i4, m5 );
+
+    UNREFERENCED(m5);                 // Not used
+
+    ZVECTOR_CHECK( regs );
+
+    if ((i4 & 0xf8) != 0)
+        ARCH_DEP(program_interrupt) (regs, PGM_SPECIFICATION_EXCEPTION);
+    
+    shift = i4 & 0x7;
+    for (i = 0; i < 16; i++) {
+        temp[i] = VR_UB(v2, i);
+        temp[i + 16] = VR_UB(v3, i);
+    }
+    for (i=0; i < 16; i++) {
+        VR_UB(v1, i) = temp[i] << shift | temp[i + 1] >> (8 - shift);
+    }
+
+    ZVECTOR_END( regs );
+}
+
+#endif /* defined( FEATURE_148_VECTOR_ENH_FACILITY_2 ) */
 
 /* ============================================= */
 /* TEMPORARY while zvector.c is being developed */

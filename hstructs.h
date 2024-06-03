@@ -209,6 +209,7 @@ struct REGS {                           /* Processor registers       */
 // fine FPR_T(_r)    vfp[(_r)].F.HH.H.H.H /* Tiny, bits 0-15         */
 
 #define VR_UQ(_v)     regs->vfp[(_v)]                 /* Quadword             */
+#define VR_UV(_v)     regs->vfp[(_v)].v               /* SIMD vector          */
 #define VR_Q(_v)     vfp[(_v)]               /* Quadword             */
 #if defined(WORDS_BIGENDIAN)
   #define VR_D(_v,_i)  vfp[(_v)].ud[(_i)]   /* Doubleword           */
@@ -597,7 +598,7 @@ struct REGS {                           /* Processor registers       */
      /* TLB - Translation lookaside buffer                           */
         unsigned int tlbID;             /* Validation identifier     */
         TLB     tlb;                    /* Translation lookaside buf */
-
+        LARGE_INTEGER ticks;            /* Query performance */
         BLOCK_TRAILER;                  /* Name of block  END        */
 };
 // end REGS

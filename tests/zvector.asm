@@ -495,12 +495,39 @@ test25   vlm   v2,v3,data25
          vst   v1,have25
          clc   have25,must25
          jne   failure
-         j     success
+         j     test26
 data25   dc    x'0123456789abcdef',x'fedcba9876543210'
          dc    x'f0e1d2c3b4a59687',x'78695a4b3c2d1e0a'
 have25   ds    xl16
 must25   dc    x'123456789abcdeff',x'edcba9876543210f'
+*- VSLR ---------------------------------------------------------------
+test26   vlm   v2,v3,data26
+         vsrd  v1,v2,v3,4
+         vst   v1,have26
+         clc   have26,must26
+         jne   failure
+         j     test27
+data26   dc    x'0123456789abcdef',x'fedcba9876543210'
+         dc    x'f0e1d2c3b4a59687',x'78695a4b3c2d1e0a'
+have26   ds    xl16
+must26   dc    x'0f0e1d2c3b4a5968',x'778695a4b3c2d1e0'
+*- VSTRS --------------------------------------------------------------
+test27   vlm   v2,v7,data27
+         vstrsb v1,v2,v3,v4
+         vst   v1,have27
+         vstrszb v1,v5,v6,v7
+         vst   v1,have27+16
+         clc   have27,must27
+         jne   failure
+         j     success
+data27   dc    cl16'zvector hercules'
+         dc    cl16'hercules'
+         dc    x'0000000000000008',x'78695a4b3c2d1e0a'
+         dc    cl16'vector hercules'
+         dc    cl8'hercules',x'008695a4b3c2d1e'
+         dc    x'00000000000000FF',x'78695a4b3c2d1e0a'
+have27   ds    xl32
+must27   dc    x'0000000000000008',x'0000000000000000'
+         dc    x'0000000000000007',x'0000000000000000'
 *----------------------------------------------------------------------
          end
-			
-

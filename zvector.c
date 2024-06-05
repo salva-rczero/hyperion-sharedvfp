@@ -186,8 +186,8 @@ DEF_INST( vector_load )
 
     VRX( inst, regs, v1, x2, b2, effective_addr2, m3);
 
-    UNREFERENCED(m3);              // Alignment hint      
-    
+    UNREFERENCED(m3);              // Alignment hint
+
     ZVECTOR_CHECK( regs );
     PER_ZEROADDR_XCHECK2( regs, x2, b2 );
 
@@ -318,7 +318,7 @@ DEF_INST( vector_store )
 
     VRX( inst, regs, v1, x2, b2, effective_addr2, m3 );
 
-    UNREFERENCED(m3);              // Alignment hint      
+    UNREFERENCED(m3);              // Alignment hint
 
     ZVECTOR_CHECK( regs );
     PER_ZEROADDR_XCHECK2( regs, x2, b2 );
@@ -459,15 +459,18 @@ DEF_INST( vector_load_gr_from_vr_element )
 
     ZVECTOR_CHECK( regs );
 
-    switch (m4)
+    if (d2 < (16 >> m4))
     {
-    case 0: regs->GR( r1 ) = VR_UB( v3, d2 ); break;
-    case 1: regs->GR( r1 ) = VR_UH( v3, d2 ); break;
-    case 2: regs->GR( r1 ) = VR_UF( v3, d2 ); break;
-    case 3: regs->GR( r1 ) = VR_UD( v3, d2 ); break;
-    default:
-        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
-        break;
+        switch (m4)
+        {
+        case 0: regs->GR(r1) = VR_UB(v3, d2); break;
+        case 1: regs->GR(r1) = VR_UH(v3, d2); break;
+        case 2: regs->GR(r1) = VR_UF(v3, d2); break;
+        case 3: regs->GR(r1) = VR_UD(v3, d2); break;
+        default:
+            ARCH_DEP(program_interrupt)(regs, PGM_SPECIFICATION_EXCEPTION);
+            break;
+        }
     }
 
     ZVECTOR_END( regs );
@@ -626,7 +629,7 @@ DEF_INST( vector_load_multiple )
 
     VRS_A( inst, regs, v1, v3, b2, effective_addr2, m4 );
 
-    UNREFERENCED(m4);              // Alignment hint      
+    UNREFERENCED(m4);              // Alignment hint
 
     ZVECTOR_CHECK( regs );
     PER_ZEROADDR_XCHECK( regs, b2 );
@@ -663,7 +666,7 @@ DEF_INST( vector_load_with_length )
     memset(&temp, 0, sizeof(temp));
 
     ARCH_DEP( vfetchc )( &temp, min(regs->GR_L(r3), 15), effective_addr2, b2, regs );
-    
+
     for (i=0; i < 16; i++)
         VR_UB(v1, i) = temp[i];
 
@@ -718,7 +721,7 @@ DEF_INST( vector_element_shift_right_logical )
 DEF_INST( vector_element_shift_right_arithmetic )
 {
     int     v1, v3, b2, m4, shift, i;
-    VADR    effective_addr2;    
+    VADR    effective_addr2;
 
     VRS_A( inst, regs, v1, v3, b2, effective_addr2, m4 );
 
@@ -764,7 +767,7 @@ DEF_INST( vector_store_multiple )
 
     VRS_A( inst, regs, v1, v3, b2, effective_addr2, m4 );
 
-    UNREFERENCED(m4);              // Alignment hint      
+    UNREFERENCED(m4);              // Alignment hint
 
     ZVECTOR_CHECK( regs );
 
@@ -799,14 +802,14 @@ DEF_INST( vector_store_with_length )
     ZVECTOR_CHECK( regs );
 
     PER_ZEROADDR_XCHECK( regs, b2 );
-    
+
     len = min(regs->GR_L(r3), 15);
-    
+
     for (i=0; i <= len; i++)
         temp[i] = VR_UB(v1, i);
 
     ARCH_DEP( vstorec )( &temp, len , effective_addr2, b2, regs );
-    
+
     ZVECTOR_END( regs );
 }
 
@@ -820,9 +823,9 @@ DEF_INST( vector_load_element_immediate_8 )
     VRI_A( inst, regs, v1, i2, m3 );
 
     ZVECTOR_CHECK( regs );
-    
+
     VR_UB(v1,m3) = i2 & UCHAR_MAX;
-    
+
     ZVECTOR_END( regs );
 }
 
@@ -836,12 +839,12 @@ DEF_INST( vector_load_element_immediate_16 )
     VRI_A( inst, regs, v1, i2, m3 );
 
     ZVECTOR_CHECK( regs );
-    
-    if (m3 > 7) 
+
+    if (m3 > 7)
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
-    
+
     VR_SH(v1, m3) = i2;
-    
+
     ZVECTOR_END( regs );
 }
 
@@ -856,11 +859,11 @@ DEF_INST( vector_load_element_immediate_64 )
 
     ZVECTOR_CHECK( regs );
 
-    if (m3 > 1) 
+    if (m3 > 1)
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
 
     VR_SD(v1, m3) = (S64) i2;
-    
+
     ZVECTOR_END( regs );
 }
 
@@ -875,7 +878,7 @@ DEF_INST( vector_load_element_immediate_32 )
 
     ZVECTOR_CHECK( regs );
 
-    if (m3 > 3) 
+    if (m3 > 3)
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
 
     VR_SF(v1, m3) = i2;
@@ -913,7 +916,7 @@ DEF_INST( vector_replicate_immediate )
 
     ZVECTOR_CHECK( regs );
 
-    switch (m3) 
+    switch (m3)
     {
         case 0:
             for (i=0; i < 16; i++)
@@ -1051,7 +1054,7 @@ DEF_INST( vector_generate_mask )
     default:
         break;
     }
-    
+
     if (sel == max)
         regs->psw.cc = 0;
     else if (sel > 0)
@@ -1082,7 +1085,7 @@ DEF_INST( vector_replicate )
 
     if (i2 >= (16 >> m4))
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
-    
+
     switch (m4)
     {
     case 0:
@@ -1164,7 +1167,7 @@ DEF_INST( vector_count_trailing_zeros )
 
     UNREFERENCED(m4);                    // Not used
     UNREFERENCED(m5);                    // Not used
-    
+
     ZVECTOR_CHECK( regs );
 
     switch (m3)
@@ -1208,7 +1211,7 @@ DEF_INST( vector_count_leading_zeros )
 
     UNREFERENCED(m4);                    // Not used
     UNREFERENCED(m5);                    // Not used
-    
+
     ZVECTOR_CHECK( regs );
 
     switch (m3)
@@ -1253,7 +1256,7 @@ DEF_INST( vector_load_vector )
     UNREFERENCED(m3);                    // Not used
     UNREFERENCED(m4);                    // Not used
     UNREFERENCED(m5);                    // Not used
-    
+
     ZVECTOR_CHECK( regs );
 
     VR_UQ(v1) = VR_UQ(v2);
@@ -1269,7 +1272,7 @@ DEF_INST( vector_isolate_string )
     int     v1, v2, m3, m4, m5, i, zero = 0;
 
     VRR_A( inst, regs, v1, v2, m3, m4, m5 );
-    
+
     UNREFERENCED(m4);                    // Not used
 
     ZVECTOR_CHECK( regs );
@@ -1312,11 +1315,11 @@ DEF_INST( vector_isolate_string )
 
     if (M5_CS)
         regs->psw.cc = (zero == 0) ? 0 : 3;
-    
+
 
 #undef M5_RE
 #undef M5_CS
-    
+
     ZVECTOR_END( regs );
 }
 
@@ -1373,7 +1376,7 @@ DEF_INST( vector_merge_low )
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
     ZVECTOR_CHECK( regs );
-    
+
     switch (m4)
     {
     case 0:
@@ -1381,7 +1384,7 @@ DEF_INST( vector_merge_low )
             temp8[i*2  ] = VR_UB(v2, i + 8);
             temp8[i*2+1] = VR_UB(v3, i + 8);
         }
-        for (i=0; i < 16; i++) 
+        for (i=0; i < 16; i++)
             VR_UB(v1, i) = temp8[i];
         break;
     case 1:
@@ -1389,7 +1392,7 @@ DEF_INST( vector_merge_low )
             temp16[i*2  ] = VR_UH(v2, i + 4);
             temp16[i*2+1] = VR_UH(v3, i + 4);
         }
-        for (i=0; i < 8; i++) 
+        for (i=0; i < 8; i++)
             VR_UH(v1, i) = temp16[i];
         break;
     case 2:
@@ -1397,7 +1400,7 @@ DEF_INST( vector_merge_low )
             temp32[i*2  ] = VR_UF(v2, i + 2);
             temp32[i*2+1] = VR_UF(v3, i + 2);
         }
-        for (i=0; i < 4; i++) 
+        for (i=0; i < 4; i++)
             VR_UF(v1, i) = temp32[i];
         break;
     case 3:
@@ -1439,7 +1442,7 @@ DEF_INST( vector_merge_high )
             temp8[i*2  ] = VR_UB(v2, i);
             temp8[i*2+1] = VR_UB(v3, i);
         }
-        for (i=0; i < 16; i++) 
+        for (i=0; i < 16; i++)
             VR_UB(v1, i) = temp8[i];
         break;
     case 1:
@@ -1447,7 +1450,7 @@ DEF_INST( vector_merge_high )
             temp16[i*2  ] = VR_UH(v2, i);
             temp16[i*2+1] = VR_UH(v3, i);
         }
-        for (i=0; i < 8; i++) 
+        for (i=0; i < 8; i++)
             VR_UH(v1, i) = temp16[i];
         break;
     case 2:
@@ -1455,7 +1458,7 @@ DEF_INST( vector_merge_high )
             temp32[i*2  ] = VR_UF(v2, i);
             temp32[i*2+1] = VR_UF(v3, i);
         }
-        for (i=0; i < 4; i++) 
+        for (i=0; i < 4; i++)
             VR_UF(v1, i) = temp32[i];
         break;
     case 3:
@@ -1502,7 +1505,7 @@ DEF_INST( vector_sum_across_word )
     UNREFERENCED(m6);                    // Not used
 
     ZVECTOR_CHECK( regs );
-    
+
     switch (m4)
     {
     case 0:
@@ -1517,7 +1520,7 @@ DEF_INST( vector_sum_across_word )
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
         break;
     }
-    
+
     ZVECTOR_END( regs );
 }
 
@@ -1528,7 +1531,7 @@ DEF_INST( vector_sum_across_doubleword )
 {
     int     v1, v2, v3, m4, m5, m6;
     U64     high, low, add;
-    
+
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
     UNREFERENCED(m5);                    // Not used
@@ -1576,7 +1579,7 @@ DEF_INST( vector_checksum )
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
     ZVECTOR_CHECK( regs );
-    
+
     sum = VR_UF(v3, 1);
     for (i=0; i < 4; i++) {
         sum += VR_UF(v2, i);
@@ -1586,7 +1589,7 @@ DEF_INST( vector_checksum )
     VR_UF(v1, 1) = sum;
     VR_UF(v1, 2) = 0;
     VR_UF(v1, 3) = 0;
-        
+
     ZVECTOR_END( regs );
 }
 
@@ -1652,7 +1655,7 @@ DEF_INST( vector_and )
     VR_UD(v1, 0) = VR_UD(v2, 0) & VR_UD(v3, 0);
     VR_UD(v1, 1) = VR_UD(v2, 1) & VR_UD(v3, 1);
 #endif
-    
+
     ZVECTOR_END( regs );
 }
 
@@ -1803,7 +1806,7 @@ DEF_INST( vector_element_rotate_and_insert_under_mask )
     VRI_D( inst, regs, v1, v2, v3, i4, m5 );
 
     ZVECTOR_CHECK( regs );
-    
+
     switch (m5)
     {
     case 0:
@@ -1867,7 +1870,7 @@ DEF_INST( vector_element_rotate_left_logical_vector )
     UNREFERENCED(m6);           // Not used
 
     ZVECTOR_CHECK( regs );
-    
+
     switch (m4)
     {
     case 0:
@@ -1991,7 +1994,7 @@ DEF_INST( vector_element_shift_right_logical_vector )
     UNREFERENCED(m6);                 // Not used
 
     ZVECTOR_CHECK( regs );
-    
+
     switch (m4)
     {
     case 0:
@@ -2113,10 +2116,10 @@ DEF_INST( vector_shift_right_logical_by_byte )
     ZVECTOR_CHECK( regs );
 
     shift = (VR_UB(v3, 7) >> 3) & 0x0f;
-    
+
     VR_UD(v1, 0) = 0;
     VR_UD(v1, 1) = 0;
-    
+
     for (i=shift; i < 16; i++)
         VR_UB(v1, i) = VR_UB(v2, i - shift);
 
@@ -2163,9 +2166,9 @@ DEF_INST( vector_shift_right_arithmetic_by_byte )
     ZVECTOR_CHECK( regs );
 
     shift = (VR_UB(v3, 7) >> 3) & 0x0f;
-    
+
     pad = (VR_UB(v2, 0) & 0x80) ? 0xff : 0x00;
-    
+
     for (i=0; i < 16; i++)
         VR_UB(v1, i) = (i-shift) >= 0 ? VR_UB(v2, i-shift) : pad;
 
@@ -2227,7 +2230,7 @@ DEF_INST( vector_find_element_equal )
         break;
     }
     VR_UD(v1, 0) = 0;
-    VR_UB(v1, 7) = min(ind1, ind2) * (1 << m4); 
+    VR_UB(v1, 7) = min(ind1, ind2) * (1 << m4);
     VR_UD(v1, 1) = 0;
 
     if (M5_CS)               // if M5_CS (Condition Code Set)
@@ -2266,7 +2269,7 @@ DEF_INST( vector_find_element_not_equal )
 
     if (m4 > 2 || M5_RE)
         ARCH_DEP(program_interrupt) (regs, PGM_SPECIFICATION_EXCEPTION);
-    
+
     switch (m4)
     {
     case 0:
@@ -2473,9 +2476,9 @@ DEF_INST( vector_permute_doubleword_immediate )
 
     UNREFERENCED(m5);                     // Not used
     UNREFERENCED(m6);                     // Not used
-    
+
     ZVECTOR_CHECK( regs );
-    
+
     d1 = VR_UD(v2, (m4 >> 2 & 0x01));
     d2 = VR_UD(v3, (m4 & 0x01));
 
@@ -2504,7 +2507,7 @@ DEF_INST( vector_string_range_compare )
 
     VR_UD(v1, 0) = 0;
     VR_UD(v1, 1) = 0;
-    
+
     switch (m5)
     {
     case 0:
@@ -2641,7 +2644,7 @@ DEF_INST( vector_select )
 
     VR_UD(v1, 1) = (VR_UD(v4, 1) & VR_UD(v2, 1)) | (~VR_UD(v4, 1) & VR_UD(v3, 1));
     VR_UD(v1, 0) = (VR_UD(v4, 0) & VR_UD(v2, 0)) | (~VR_UD(v4, 0) & VR_UD(v3, 0));
-    
+
     ZVECTOR_END( regs );
 }
 
@@ -2704,7 +2707,7 @@ DEF_INST( vector_pack )
             temp16[i] = VR_UH(v2, i);
             temp16[i+8] = VR_UH(v3, i);
         }
-        for (i=0; i < 16; i++) 
+        for (i=0; i < 16; i++)
             VR_UB(v1, i) = temp16[i] & UCHAR_MAX;
         break;
     case 2:
@@ -2712,7 +2715,7 @@ DEF_INST( vector_pack )
             temp32[i] = VR_UF(v2, i);
             temp32[i+4] = VR_UF(v3, i);
         }
-        for (i=0; i < 8; i++) 
+        for (i=0; i < 8; i++)
             VR_UH(v1, i) = temp32[i] & USHRT_MAX;
         break;
     case 3:
@@ -2720,7 +2723,7 @@ DEF_INST( vector_pack )
             temp64[i] = VR_UD(v2, i);
             temp64[i+2] = VR_UD(v3, i);
         }
-        for (i=0; i < 4; i++) 
+        for (i=0; i < 4; i++)
             VR_UF(v1, i) = temp64[i] & UINT_MAX;
         break;
     default:
@@ -2793,7 +2796,7 @@ DEF_INST(vector_pack_logical_saturate)
     }
 
     if (M5_CS) {               // if M5_CS (Condition Code Set)
-        if (sat == 0) 
+        if (sat == 0)
             regs->psw.cc = 0;
         else if (sat < 16)
             regs->psw.cc = 1;
@@ -2867,7 +2870,7 @@ DEF_INST( vector_pack_saturate )
     }
 
     if (M5_CS) {               // if M5_CS (Condition Code Set)
-        if (sat == 0) 
+        if (sat == 0)
             regs->psw.cc = 0;
         else if (sat < 16)
             regs->psw.cc = 1;
@@ -2876,7 +2879,7 @@ DEF_INST( vector_pack_saturate )
     }
 
 #undef M5_CS
-    
+
     ZVECTOR_END( regs );
 
 }
@@ -3000,7 +3003,7 @@ DEF_INST( vector_multiply_logical_even )
 
     UNREFERENCED(m5);               // Not used
     UNREFERENCED(m6);               // Not used
-    
+
     ZVECTOR_CHECK( regs );
 
     switch (m4)
@@ -3035,7 +3038,7 @@ DEF_INST( vector_multiply_logical_odd )
 
     UNREFERENCED(m5);               // Not used
     UNREFERENCED(m6);               // Not used
-    
+
     ZVECTOR_CHECK( regs );
 
     switch (m4)
@@ -3070,7 +3073,7 @@ DEF_INST( vector_multiply_even )
 
     UNREFERENCED(m5);               // Not used
     UNREFERENCED(m6);               // Not used
-    
+
     ZVECTOR_CHECK( regs );
 
     switch (m4)
@@ -3105,7 +3108,7 @@ DEF_INST( vector_multiply_odd )
 
     UNREFERENCED(m5);               // Not used
     UNREFERENCED(m6);               // Not used
-    
+
     ZVECTOR_CHECK( regs );
 
     switch (m4)
@@ -3244,7 +3247,7 @@ DEF_INST( vector_multiply_and_add_logical_even )
     VRR_D( inst, regs, v1, v2, v3, v4, m5, m6 );
 
     UNREFERENCED(m6);               // Not used
-    
+
     ZVECTOR_CHECK( regs );
 
     switch (m5)
@@ -3278,7 +3281,7 @@ DEF_INST( vector_multiply_and_add_logical_odd )
     VRR_D( inst, regs, v1, v2, v3, v4, m5, m6 );
 
     UNREFERENCED(m6);               // Not used
-    
+
     ZVECTOR_CHECK( regs );
 
     switch (m5)
@@ -3313,7 +3316,7 @@ DEF_INST( vector_multiply_and_add_even )
     VRR_D( inst, regs, v1, v2, v3, v4, m5, m6 );
 
     UNREFERENCED(m6);               // Not used
-    
+
     ZVECTOR_CHECK( regs );
 
     switch (m5)
@@ -3347,7 +3350,7 @@ DEF_INST( vector_multiply_and_add_odd )
     VRR_D( inst, regs, v1, v2, v3, v4, m5, m6 );
 
     UNREFERENCED(m6);               // Not used
-    
+
     ZVECTOR_CHECK( regs );
 
     switch (m5)
@@ -3452,7 +3455,7 @@ DEF_INST( vector_add_with_carry_compute_carry )
 {
     int     v1, v2, v3, v4, m5, m6;
     U64     high, low, carry;
-    
+
     VRR_D( inst, regs, v1, v2, v3, v4, m5, m6 );
 
     ZVECTOR_CHECK( regs );
@@ -3857,7 +3860,7 @@ DEF_INST( vector_unpack_logical_low )
     U64     temp64[2];
 
     VRR_A( inst, regs, v1, v2, m3, m4, m5 );
-    
+
     UNREFERENCED(m4);              // Not used
     UNREFERENCED(m5);              // Not used
 
@@ -3907,7 +3910,7 @@ DEF_INST( vector_unpack_logical_high )
     UNREFERENCED(m5);              // Not used
 
     ZVECTOR_CHECK( regs );
-    
+
     switch (m3)
     {
     case 0:
@@ -4040,12 +4043,12 @@ DEF_INST( vector_test_under_mask )
 
     low = VR_UD(v1, 1) & VR_UD(v2, 1);
     high = VR_UD(v1, 0) & VR_UD(v2, 0);
-    
+
     if (low == 0 && high == 0)
         regs->psw.cc = 0;
     else if (low == VR_UD(v2, 1) && high == VR_UD(v2, 0))
         regs->psw.cc = 3;
-    else 
+    else
         regs->psw.cc = 1;
 
     ZVECTOR_END( regs );
@@ -4069,7 +4072,7 @@ DEF_INST( vector_element_compare_logical )
             regs->psw.cc = 0;
         else if (VR_UB(v1, 7) < VR_UB(v2, 7))
             regs->psw.cc = 1;
-        else 
+        else
             regs->psw.cc = 2;
         break;
     case 1:
@@ -4077,7 +4080,7 @@ DEF_INST( vector_element_compare_logical )
             regs->psw.cc = 0;
         else if (VR_UH(v1, 3) < VR_UH(v2, 3))
             regs->psw.cc = 1;
-        else 
+        else
             regs->psw.cc = 2;
         break;
     case 2:
@@ -4085,7 +4088,7 @@ DEF_INST( vector_element_compare_logical )
             regs->psw.cc = 0;
         else if (VR_UF(v1, 1) < VR_UF(v2, 1))
             regs->psw.cc = 1;
-        else 
+        else
             regs->psw.cc = 2;
         break;
     case 3:
@@ -4093,7 +4096,7 @@ DEF_INST( vector_element_compare_logical )
             regs->psw.cc = 0;
         else if (VR_UD(v1, 0) < VR_UD(v2, 0))
             regs->psw.cc = 1;
-        else 
+        else
             regs->psw.cc = 2;
         break;
     default:
@@ -4122,7 +4125,7 @@ DEF_INST( vector_element_compare )
             regs->psw.cc = 0;
         else if (VR_SB(v1, 7) < VR_SB(v2, 7))
             regs->psw.cc = 1;
-        else 
+        else
             regs->psw.cc = 2;
         break;
     case 1:
@@ -4130,7 +4133,7 @@ DEF_INST( vector_element_compare )
             regs->psw.cc = 0;
         else if (VR_SH(v1, 3) < VR_SH(v2, 3))
             regs->psw.cc = 1;
-        else 
+        else
             regs->psw.cc = 2;
         break;
     case 2:
@@ -4138,7 +4141,7 @@ DEF_INST( vector_element_compare )
             regs->psw.cc = 0;
         else if (VR_SF(v1, 1) < VR_SF(v2, 1))
             regs->psw.cc = 1;
-        else 
+        else
             regs->psw.cc = 2;
         break;
     case 3:
@@ -4146,7 +4149,7 @@ DEF_INST( vector_element_compare )
             regs->psw.cc = 0;
         else if (VR_SD(v1, 0) < VR_SD(v2, 0))
             regs->psw.cc = 1;
-        else 
+        else
             regs->psw.cc = 2;
         break;
     default:
@@ -4205,7 +4208,7 @@ DEF_INST( vector_load_positive )
     VRR_A( inst, regs, v1, v2, m3, m4, m5 );
 
     ZVECTOR_CHECK( regs );
-    
+
     switch (m3)
     {
     case 0:
@@ -4498,9 +4501,9 @@ DEF_INST(vector_add)
 {
     int     v1, v2, v3, m4, m5, m6, i;
     U64     high, low;
-     
+
     VRR_C(inst, regs, v1, v2, v3, m4, m5, m6);
-    
+
     ZVECTOR_CHECK(regs);
 
     switch (m4)
@@ -4531,7 +4534,7 @@ DEF_INST(vector_add)
         if (low < VR_UD(v2, 1))
             high++;
         VR_UD(v1, 0) = high;
-        VR_UD(v1, 1) = low; 
+        VR_UD(v1, 1) = low;
         break;
     default:
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
@@ -4594,9 +4597,9 @@ DEF_INST(vector_subtract)
 {
     int     v1, v2, v3, m4, m5, m6, i;
     U64     high, low;
-    
+
     VRR_C(inst, regs, v1, v2, v3, m4, m5, m6);
-    
+
     ZVECTOR_CHECK(regs);
 
     switch (m4)
@@ -4633,7 +4636,7 @@ DEF_INST(vector_subtract)
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
         break;
     }
-    
+
     ZVECTOR_END(regs);
 }
 
@@ -4649,7 +4652,7 @@ DEF_INST( vector_compare_equal )
     ZVECTOR_CHECK( regs );
 
 #define M5_CS ((m5 & 0x1) != 0) // Condition Code Set
-    
+
     switch (m4)
     {
     case 0:
@@ -4731,7 +4734,7 @@ DEF_INST( vector_compare_high_logical )
     ZVECTOR_CHECK( regs );
 
 #define M5_CS ((m5 & 0x1) != 0) // Condition Code Set
-    
+
     switch (m4)
     {
     case 0:
@@ -4804,7 +4807,7 @@ DEF_INST( vector_compare_high )
 
     ZVECTOR_CHECK( regs );
 #define M5_CS ((m5 & 0x1) != 0) // Condition Code Set
-    
+
     switch (m4)
     {
     case 0:
@@ -5031,7 +5034,7 @@ DEF_INST(vector_not_exclusive_or)
     UNREFERENCED(v4);              // Not used
     UNREFERENCED(m5);              // Not used
     UNREFERENCED(m6);              // Not used
-    
+
     ZVECTOR_CHECK( regs );
 
     VR_UD(v1, 1) = ~(VR_UD(v2, 1) ^ VR_UD(v3, 1));
@@ -5052,7 +5055,7 @@ DEF_INST(vector_nand)
     UNREFERENCED(v4);              // Not used
     UNREFERENCED(m5);              // Not used
     UNREFERENCED(m6);              // Not used
-    
+
     ZVECTOR_CHECK( regs );
 
     VR_UD(v1, 1) = ~(VR_UD(v2, 1) & VR_UD(v3, 1));
@@ -5073,7 +5076,7 @@ DEF_INST(vector_or_with_complement)
     UNREFERENCED(v4);              // Not used
     UNREFERENCED(m5);              // Not used
     UNREFERENCED(m6);              // Not used
-    
+
     ZVECTOR_CHECK( regs );
 
     VR_UD(v1, 1) = VR_UD(v2, 1) | ~VR_UD(v3, 1);
@@ -5090,7 +5093,7 @@ DEF_INST(vector_bit_permute)
     int     v1, v2, v3, v4, m5, m6, i;
     U8      bits[32];
     U16     result = 0;
-    
+
     VRR_C( inst, regs, v1, v2, v3, v4, m5, m6 );
 
     UNREFERENCED(v4);              // Not used
@@ -5110,7 +5113,7 @@ DEF_INST(vector_bit_permute)
     VR_UD(v1, 0) = 0;
     VR_UD(v1, 1) = 0;
     VR_UH(v1, 3) = result;
-    
+
     ZVECTOR_END( regs );
 }
 
@@ -5242,7 +5245,36 @@ DEF_INST(vector_multiply_sum_logical)
 /*-------------------------------------------------------------------*/
 DEF_INST( vector_shift_left_double_by_bit )
 {
-    int     v1, v2, v3, i4, m5, shift, i;
+    int     v1, v2, v3, i4, m5, i;
+    U8      temp[17];
+
+    VRI_D( inst, regs, v1, v2, v3, i4, m5 );
+
+    UNREFERENCED(m5);                 // Not used
+
+    ZVECTOR_CHECK( regs );
+
+    if ((i4 & 0xf8) != 0)
+        ARCH_DEP(program_interrupt) (regs, PGM_SPECIFICATION_EXCEPTION);
+
+    for (i = 0; i < 16; i++) {
+        temp[i] = VR_UB(v2, i);
+    }
+    temp[16] = VR_UB(v3, 0);
+
+    for (i=0; i < 16; i++) {
+        VR_UB(v1, i) = temp[i] << i4 | temp[i + 1] >> (8 - i4);
+    }
+
+    ZVECTOR_END( regs );
+}
+
+/*-------------------------------------------------------------------*/
+/* E787 VSRD   - Vector Shift Right Double By Bit            [VRI-d] */
+/*-------------------------------------------------------------------*/
+DEF_INST( vector_shift_right_double_by_bit )
+{
+    int     v1, v2, v3, i4, m5, i;
     U8      temp[32];
 
     VRI_D( inst, regs, v1, v2, v3, i4, m5 );
@@ -5253,15 +5285,124 @@ DEF_INST( vector_shift_left_double_by_bit )
 
     if ((i4 & 0xf8) != 0)
         ARCH_DEP(program_interrupt) (regs, PGM_SPECIFICATION_EXCEPTION);
-    
-    shift = i4 & 0x7;
+
     for (i = 0; i < 16; i++) {
         temp[i] = VR_UB(v2, i);
-        temp[i + 16] = VR_UB(v3, i);
+        temp[i+16] = VR_UB(v3, i);
     }
+
     for (i=0; i < 16; i++) {
-        VR_UB(v1, i) = temp[i] << shift | temp[i + 1] >> (8 - shift);
+        VR_UB(v1, i) = temp[i+16] >> i4 | temp[i+15] << (8 - i4);
     }
+
+    ZVECTOR_END( regs );
+}
+/*-------------------------------------------------------------------*/
+/* E78B VSTRS  - Vector String Search                        [VRR-d] */
+/*-------------------------------------------------------------------*/
+DEF_INST( vector_string_search )
+{
+    int     v1, v2, v3, v4, m5, m6;
+    int     substr_len, str_len, i, k, eos, char_size, x, y;
+
+    VRR_D( inst, regs, v1, v2, v3, v4, m5, m6 );
+
+    ZVECTOR_CHECK( regs );
+
+#define M6_ZS ((m6 & 0x2) != 0) // Zero Search
+
+    if (m5 > 2)
+       ARCH_DEP(program_interrupt) (regs, PGM_SPECIFICATION_EXCEPTION);
+
+    char_size = 1 << m5;
+    substr_len = VR_UB(v4, 7);
+    k = 0;
+
+    if (!M6_ZS)
+    {
+        if (substr_len != 0) {
+            if (substr_len % char_size == 0) {
+                for (; k != 16; k += char_size)
+                {
+                    if (k + substr_len <= 16)
+                    {
+                        for (x = k, y = 0; (VR_UB(v2, x) == VR_UB(v3, y)) && y < substr_len; x++, y++) {}
+                        if (y == substr_len)
+                        {
+                            regs->psw.cc = 2;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        for (x = k, y = 0; (VR_UB(v2, x) == VR_UB(v3, y)) && x < 16; x++, y++) {}
+                        if (x == 16)
+                        {
+                            regs->psw.cc = 3;
+                            break;
+                        }
+                    }
+
+                }
+                if (k == 16)
+                    regs->psw.cc = 0;
+            }
+            /* else model dependent result */
+        }
+        else regs->psw.cc = 2;
+    }
+    else {
+        str_len = 0, i = 0, eos = 0;
+        for (; i < 16; i += char_size) {
+            for (x = i; (x < i + char_size) && VR_UB(v3, x) == 0; x++) {}
+            if (x == i + char_size) break;
+        }
+        if (i < substr_len) substr_len = i;
+        if (substr_len == 0) regs->psw.cc = 2;
+        else {
+            for (x = k; k != 16; k+=char_size) {
+                for (x = k; (x < k + char_size) && VR_UB(v2, x) == 0; x++) {}
+                if (x == k + char_size) {
+                    eos = 1;
+                    break;
+                }
+            }
+            str_len = k, k = 0;
+            if (substr_len % char_size == 0) {
+                for (;; k += char_size) {
+                    if (k < str_len && (eos == 0 || k + substr_len <= str_len)) {
+                        if (k + substr_len <= str_len) {
+                            for (x = k, y = 0; (y < substr_len) && VR_UB(v2, x) == VR_UB(v3, y); x++, y++) {}
+                            if (y == substr_len) {
+                                regs->psw.cc = 2;
+                                break;
+                            }
+                        }
+                        else {
+                            for (x = k, y = 0; (x < 16) && VR_UB(v2, x) == VR_UB(v3, y); x++, y++) {}
+                            if (x == 16) {
+                                regs->psw.cc = 3;
+                                break;
+                            }
+                        }
+                    }
+                    else {
+                        regs->psw.cc = eos == 1 ? 1 : 0;
+                        k = 16;
+                        break;
+                    }
+                }
+            }
+            /* else model dependent result */
+        }
+
+    }
+
+    VR_UD(v1, 0) = 0;
+    VR_UB(v1, 7) = k;
+    VR_UD(v1, 1) = 0;
+
+#undef M6_ZS
 
     ZVECTOR_END( regs );
 }
@@ -5273,7 +5414,7 @@ DEF_INST( vector_shift_left_double_by_bit )
 #if defined(__GNUC__)
     #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 #endif
-/* ============================================= */ 
+/* ============================================= */
 
 #if !defined( _GEN_ARCH )
 

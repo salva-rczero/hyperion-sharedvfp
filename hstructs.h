@@ -598,7 +598,7 @@ struct REGS {                           /* Processor registers       */
      /* TLB - Translation lookaside buffer                           */
         unsigned int tlbID;             /* Validation identifier     */
         TLB     tlb;                    /* Translation lookaside buf */
-        LARGE_INTEGER ticks;            /* Query performance */
+
         BLOCK_TRAILER;                  /* Name of block  END        */
 };
 // end REGS

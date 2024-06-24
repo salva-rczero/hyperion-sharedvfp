@@ -50,6 +50,10 @@
 #if defined(_M_X64) || defined( __SSE2__ )
                  __m128i v;            /* SIMD 128 bit vector   */
 #endif
+                 U64     d[2];           /* Unsigned double words (2x64b) */
+                 U32     f[4];           /* Unsigned words        (4x32b) */
+                 U16     h[8];           /* Unsigned halfwords    (8x16b) */
+                 U8      b[16];          /* Unsigned bytes        (16x8b) */
                  U64     ud[2];           /* Unsigned double words (2x64b) */
                  U32     uf[4];           /* Unsigned words        (4x32b) */
                  U16     uh[8];           /* Unsigned halfwords    (8x16b) */
@@ -82,6 +86,10 @@
 #if defined(_M_X64) || defined( __SSE2__ )
                  __m128i v;              /* SIMD 128 bit vector   */
 #endif
+                 U64     d[2];           /* Unsigned double words (2x64b) */
+                 U32     f[4];           /* Unsigned words        (4x32b) */
+                 U16     h[8];           /* Unsigned halfwords    (8x16b) */
+                 U8      b[16];          /* Unsigned bytes        (16x8b) */
                  U64     ud[2];           /* Unsigned double words (2x64b) */
                  U32     uf[4];           /* Unsigned words        (4x32b) */
                  U16     uh[8];           /* Unsigned halfwords    (8x16b) */
@@ -108,6 +116,33 @@ typedef union {
                  DBLWRD D;
                  struct { FWORD_U H; FWORD_U L; } F;
                } DWORD_U;
+
+/*-------------------------------------------------------------------*/
+
+/*  Various zVector instructions use something called a "source      */
+/*  vector". A source vector is created by concatenating the         */
+/*  contents of two vector registers, creating a 256-bit value.      */
+/*  The 256-bit value is then indexed to obtain elements which       */
+/*  are placed in a results vector register.                         */
+
+typedef union {
+          U64    d[4];                      /* Doublewords  (4x64b)  */
+          U32    f[8];                      /* Fullwords    (8x32b)  */
+          U16    h[16];                     /* Halfwords    (16x16b) */
+          U8     b[32];                     /* Bytes        (32x8b)  */
+        } SV;
+
+#if defined( WORDS_BIGENDIAN )
+  #define SV_D(_sv,_i)  (_sv).d[(_i)]       /* Doubleword            */
+  #define SV_F(_sv,_i)  (_sv).f[(_i)]       /* Fullword              */
+  #define SV_H(_sv,_i)  (_sv).h[(_i)]       /* Halfword              */
+  #define SV_B(_sv,_i)  (_sv).b[(_i)]       /* Byte                  */
+#else
+  #define SV_D(_sv,_i)  (_sv).d[3-(_i)]     /* Doubleword            */
+  #define SV_F(_sv,_i)  (_sv).f[7-(_i)]     /* Fullword              */
+  #define SV_H(_sv,_i)  (_sv).h[15-(_i)]    /* Halfword              */
+  #define SV_B(_sv,_i)  (_sv).b[31-(_i)]    /* Byte                  */
+#endif
 
 /*-------------------------------------------------------------------*/
 /*           Internal-format PSW structure definition                */

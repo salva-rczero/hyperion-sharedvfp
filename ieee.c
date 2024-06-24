@@ -5604,6 +5604,37 @@ DEF_INST( divide_integer_bfp_short_reg )
 
 #if defined( FEATURE_129_ZVECTOR_FACILITY )
 
+/* ====================================================================== */
+/* TEMPORARY while zVector instructions are being developed */
+
+//  #if defined(__clang__)
+//      #pragma clang diagnostic ignored "-Wunused-variable"
+//      #pragma clang diagnostic ignored "-Wunused-but-set-variable"
+//      #pragma clang diagnostic ignored "-Wcomment"
+//      #pragma clang diagnostic ignored "-Wsometimes-uninitialized"
+//      #pragma clang diagnostic ignored "-Wmacro-redefined"
+//  #elif defined(__GNUC__)
+//      #pragma GCC diagnostic ignored "-Wunused-variable"
+//      #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+//      #pragma GCC diagnostic ignored "-Wcomment"
+//      #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+//  #endif
+
+//  #undef ZVECTOR_CHECK
+
+//  #define ZVECTOR_CHECK(_regs)  /* (do nothing) */
+
+//  #undef ZVECTOR_END
+
+//  #define ZVECTOR_END(_regs)                                      \
+//              ARCH_DEP(display_inst) (_regs, inst);
+
+//  #define ZVECTOR_END(_regs)                                      \
+//          if (0 && inst[5] != (U8) 0x3E && inst[5] != (U8) 0x36)  \
+//              ARCH_DEP(display_inst) (_regs, inst);
+
+/* ====================================================================== */
+
 /*
  * z/Architecture Principles of Operation (SA22-7832-10 onwards)
  * Chapter 24. Vector Floating-Point Instructions
@@ -5668,7 +5699,7 @@ static void vector_ieee_cond_trap( int vix, REGS *regs, U32 ieee_traps )
 #undef VECTOR_GET_FLOAT64_OP
 #undef VECTOR_GET_FLOAT32_OP
 
-#define VECTOR_GET_FLOAT128_OP( op, v, i, regs )  ARCH_DEP( get_float128 )( &op, &regs->VR_D( v, 0 ), &regs->VR_D( v, 1 ))
+#define VECTOR_GET_FLOAT128_OP( op, v, regs )     ARCH_DEP( get_float128 )( &op, &regs->VR_Q( v ).d[FLOAT128_HI], &regs->VR_Q( v ).d[FLOAT128_LO])
 #define VECTOR_GET_FLOAT64_OP(  op, v, i, regs )  ARCH_DEP( get_float64  )( &op, &regs->VR_D( v, i ))
 #define VECTOR_GET_FLOAT32_OP(  op, v, i, regs )  ARCH_DEP( get_float32  )( &op, &regs->VR_F( v, i ))
 
@@ -5676,7 +5707,7 @@ static void vector_ieee_cond_trap( int vix, REGS *regs, U32 ieee_traps )
 #undef VECTOR_PUT_FLOAT64_NOCC
 #undef VECTOR_PUT_FLOAT32_NOCC
 
-#define VECTOR_PUT_FLOAT128_NOCC( op, v, i, regs )  ARCH_DEP( put_float128 )( &op, &regs->VR_D( v, 0 ), &regs->VR_D( v, 1 ))
+#define VECTOR_PUT_FLOAT128_NOCC( op, v, regs )  ARCH_DEP( put_float128 )( &op, &regs->VR_Q( v ).d[FLOAT128_HI], &regs->VR_Q( v ).d[FLOAT128_LO])
 #define VECTOR_PUT_FLOAT64_NOCC(  op, v, i, regs )  ARCH_DEP( put_float64  )( &op, &regs->VR_D( v, i ))
 #define VECTOR_PUT_FLOAT32_NOCC(  op, v, i, regs )  ARCH_DEP( put_float32  )( &op, &regs->VR_F( v, i ))
 
@@ -5722,7 +5753,7 @@ DEF_INST( vector_fp_test_data_class_immediate )
     {
         float64_t   op2;
 
-        for (i=0; i < 2; i+=2)
+        for (i=0; i < 2; i++)
         {
             if (i == 0 || !M5_SE)
             {
@@ -5770,29 +5801,36 @@ DEF_INST( vector_fp_test_data_class_immediate )
     {
         float128_t  op2;
 
-        VECTOR_GET_FLOAT128_OP( op2, v2, 0, regs );
+        VECTOR_GET_FLOAT128_OP( op2, v2, regs );
         op2_dataclass = float128_class( op2 );
         softfloat_exceptionFlags = 0;
         if (op2_dataclass & i3)
         {
             one_bit_found = TRUE;
-            regs->VR_D( v1, 0 ) = 0xFFFFFFFFFFFFFFFFULL;
-            regs->VR_D( v1, 1 ) = 0xFFFFFFFFFFFFFFFFULL;
+            regs->VR_Q( v1 ).d[0] = 0xFFFFFFFFFFFFFFFFULL;
+            regs->VR_Q( v1 ).d[1] = 0xFFFFFFFFFFFFFFFFULL;
         }
         else
         {
             zero_bit_found = TRUE;
-            regs->VR_D( v1, 0 ) = 0x0000000000000000ULL;
-            regs->VR_D( v1, 1 ) = 0x0000000000000000ULL;
+            regs->VR_Q( v1 ).d[0] = 0x0000000000000000ULL;
+            regs->VR_Q( v1 ).d[1] = 0x0000000000000000ULL;
         }
     }
 
-    if (one_bit_found == TRUE && zero_bit_found == TRUE)
-        regs->psw.cc = 1;
-    else if (one_bit_found == FALSE && zero_bit_found == TRUE)
-        regs->psw.cc = 3;
+    if (one_bit_found == TRUE)
+    {
+        if (zero_bit_found == TRUE)
+            // Selected bit is 1 for at least one but not all elements (when S-bit is zero)
+            // Note: When the selected bit is 1 and the S-bit is 1 the previous if will not be true
+            regs->psw.cc = 1;
+        else
+            // Selected bit is 1 for all elements (match)
+            regs->psw.cc = 0;
+    }
     else
-        regs->psw.cc = 0;
+        // Selected bit is 0 for all elements (no match)
+        regs->psw.cc = 3;
 
 #undef M5_SE
 #undef M5_RE
@@ -5926,9 +5964,9 @@ DEF_INST( vector_fp_multiply_and_subtract )
         float128_t  op1, op2, op3, op4;
 
 
-        VECTOR_GET_FLOAT128_OP( op4, v4, 0, regs );
-        VECTOR_GET_FLOAT128_OP( op3, v3, 0, regs );
-        VECTOR_GET_FLOAT128_OP( op2, v2, 0, regs );
+        VECTOR_GET_FLOAT128_OP( op4, v4, regs );
+        VECTOR_GET_FLOAT128_OP( op3, v3, regs );
+        VECTOR_GET_FLOAT128_OP( op2, v2, regs );
 
         /* if Operand 4 is not a NaN, the sign bit is inverted */
         if (0
@@ -5954,7 +5992,7 @@ DEF_INST( vector_fp_multiply_and_subtract )
                     SCALE_FACTOR_ARITH_UFLOW_LONG );
         }
 
-        VECTOR_PUT_FLOAT128_NOCC( op1, v1, 0, regs );
+        VECTOR_PUT_FLOAT128_NOCC( op1, v1, regs );
 
         VECTOR_IEEE_EXCEPTION_TRAP( 0, regs, ieee_trap_conds,
             FPC_MASK_IMO | FPC_MASK_IMU | FPC_MASK_IMX );
@@ -6080,9 +6118,9 @@ DEF_INST( vector_fp_multiply_and_add )
         float128_t  op1, op2, op3, op4;
 
 
-        VECTOR_GET_FLOAT128_OP( op4, v4, 0, regs );
-        VECTOR_GET_FLOAT128_OP( op3, v3, 0, regs );
-        VECTOR_GET_FLOAT128_OP( op2, v2, 0, regs );
+        VECTOR_GET_FLOAT128_OP( op4, v4, regs );
+        VECTOR_GET_FLOAT128_OP( op3, v3, regs );
+        VECTOR_GET_FLOAT128_OP( op2, v2, regs );
 
         ieee_trap_conds = 0;
         softfloat_exceptionFlags = 0;
@@ -6101,7 +6139,7 @@ DEF_INST( vector_fp_multiply_and_add )
                     SCALE_FACTOR_ARITH_UFLOW_LONG );
         }
 
-        VECTOR_PUT_FLOAT128_NOCC( op1, v1, 0, regs );
+        VECTOR_PUT_FLOAT128_NOCC( op1, v1, regs );
 
         VECTOR_IEEE_EXCEPTION_TRAP( 0, regs, ieee_trap_conds,
             FPC_MASK_IMO | FPC_MASK_IMU | FPC_MASK_IMX );
@@ -6253,9 +6291,9 @@ DEF_INST( vector_fp_negative_multiply_and_subtract )
         float128_t  op1, op2, op3, op4;
 
 
-        VECTOR_GET_FLOAT128_OP( op4, v4, 0, regs );
-        VECTOR_GET_FLOAT128_OP( op3, v3, 0, regs );
-        VECTOR_GET_FLOAT128_OP( op2, v2, 0, regs );
+        VECTOR_GET_FLOAT128_OP( op4, v4, regs );
+        VECTOR_GET_FLOAT128_OP( op3, v3, regs );
+        VECTOR_GET_FLOAT128_OP( op2, v2, regs );
 
         /* if Operand 4 is not a NaN, the sign bit is inverted */
         if (0
@@ -6288,7 +6326,7 @@ DEF_INST( vector_fp_negative_multiply_and_subtract )
         )
             op1.v[FLOAT128_HI] ^= 0x8000000000000000ULL;
 
-        VECTOR_PUT_FLOAT128_NOCC( op1, v1, 0, regs );
+        VECTOR_PUT_FLOAT128_NOCC( op1, v1, regs );
 
         VECTOR_IEEE_EXCEPTION_TRAP( 0, regs, ieee_trap_conds,
             FPC_MASK_IMO | FPC_MASK_IMU | FPC_MASK_IMX );
@@ -6428,9 +6466,9 @@ DEF_INST( vector_fp_negative_multiply_and_add )
         float128_t  op1, op2, op3, op4;
 
 
-        VECTOR_GET_FLOAT128_OP( op4, v4, 0, regs );
-        VECTOR_GET_FLOAT128_OP( op3, v3, 0, regs );
-        VECTOR_GET_FLOAT128_OP( op2, v2, 0, regs );
+        VECTOR_GET_FLOAT128_OP( op4, v4, regs );
+        VECTOR_GET_FLOAT128_OP( op3, v3, regs );
+        VECTOR_GET_FLOAT128_OP( op2, v2, regs );
 
         ieee_trap_conds = 0;
         softfloat_exceptionFlags = 0;
@@ -6456,7 +6494,7 @@ DEF_INST( vector_fp_negative_multiply_and_add )
         )
             op1.v[FLOAT128_HI] ^= 0x8000000000000000ULL;
 
-        VECTOR_PUT_FLOAT128_NOCC( op1, v1, 0, regs );
+        VECTOR_PUT_FLOAT128_NOCC( op1, v1, regs );
 
         VECTOR_IEEE_EXCEPTION_TRAP( 0, regs, ieee_trap_conds,
             FPC_MASK_IMO | FPC_MASK_IMU | FPC_MASK_IMX );
@@ -6996,7 +7034,7 @@ DEF_INST( vector_fp_load_lengthened )
             SET_FPC_FLAGS_FROM_SF( regs );
         }
         op1 = f64_to_f128( op2 );
-        VECTOR_PUT_FLOAT128_NOCC( op1, v1, 0, regs );
+        VECTOR_PUT_FLOAT128_NOCC( op1, v1, regs );
     }
     else if ( m3 == 2 )  /* Short format to Long format, i.e. 32-bit to 64-bit */
     {
@@ -7106,7 +7144,7 @@ DEF_INST( vector_fp_load_rounded )
         float64_t   op1;
         float128_t  op2;
 
-        VECTOR_GET_FLOAT128_OP( op2, v2, 0, regs );
+        VECTOR_GET_FLOAT128_OP( op2, v2, regs );
 
         SET_SF_RM_FROM_MASK( m5 );
 
@@ -7120,6 +7158,7 @@ DEF_INST( vector_fp_load_rounded )
         VECTOR_IEEE_EXCEPTION_TRAP_XI( 0, regs );
 
         VECTOR_PUT_FLOAT64_NOCC( op1, v1, 0, regs );
+        VECTOR_PUT_FLOAT64_NOCC( op1, v1, 1, regs );
 
         if (softfloat_exceptionFlags)
         {
@@ -7227,11 +7266,11 @@ DEF_INST( vector_load_fp_integer )
             }
         }
     }
-    else if ( m4 == 4 )  // Extended format
+    else if ( m3 == 4 )  // Extended format
     {
         float128_t  op1, op2;
 
-        VECTOR_GET_FLOAT128_OP( op2, v2, 0, regs );
+        VECTOR_GET_FLOAT128_OP( op2, v2, regs );
 
         softfloat_exceptionFlags = 0;
         SET_SF_RM_FROM_MASK( m5 );
@@ -7240,7 +7279,7 @@ DEF_INST( vector_load_fp_integer )
 
         VECTOR_IEEE_EXCEPTION_TRAP_XI( 0, regs );
 
-        VECTOR_PUT_FLOAT128_NOCC( op1, v1, 0, regs );
+        VECTOR_PUT_FLOAT128_NOCC( op1, v1, regs );
 
         if (softfloat_exceptionFlags)
         {
@@ -7321,8 +7360,8 @@ DEF_INST( vector_fp_compare_and_signal_scalar )
     {
         float128_t  op1, op2;
 
-        VECTOR_GET_FLOAT128_OP( op2, v2, 0, regs );
-        VECTOR_GET_FLOAT128_OP( op1, v1, 0, regs );
+        VECTOR_GET_FLOAT128_OP( op2, v2, regs );
+        VECTOR_GET_FLOAT128_OP( op1, v1, regs );
 
         softfloat_exceptionFlags = 0;
         newcc = FLOAT128_COMPARE( op1, op2 );
@@ -7410,8 +7449,8 @@ DEF_INST( vector_fp_compare_scalar )
     {
         float128_t  op1, op2;
 
-        VECTOR_GET_FLOAT128_OP( op2, v2, 0, regs );
-        VECTOR_GET_FLOAT128_OP( op1, v1, 0, regs );
+        VECTOR_GET_FLOAT128_OP( op2, v2, regs );
+        VECTOR_GET_FLOAT128_OP( op1, v1, regs );
 
         softfloat_exceptionFlags = 0;
         newcc = FLOAT128_COMPARE( op1, op2 );
@@ -7502,7 +7541,7 @@ DEF_INST( vector_fp_perform_sign_operation )
                     op2.v |= 0x8000000000000000ULL;
                     break;
                 case 2:  // Positive
-                    op2.v &= 0x7FFFFFFFFFFFFFFFULL;
+                    op2.v &= ~0x8000000000000000ULL;
                     break;
                 }
 
@@ -7529,7 +7568,7 @@ DEF_INST( vector_fp_perform_sign_operation )
                     op2.v |= 0x80000000;
                     break;
                 case 2:  // Positive
-                    op2.v |= 0x7FFFFFFF;
+                    op2.v &= ~0x80000000;
                     break;
                 }
 
@@ -7541,7 +7580,7 @@ DEF_INST( vector_fp_perform_sign_operation )
     {
         float128_t  op2;
 
-        VECTOR_GET_FLOAT128_OP( op2, v2, 0, regs );
+        VECTOR_GET_FLOAT128_OP( op2, v2, regs );
 
         switch (m5)
         {
@@ -7552,11 +7591,11 @@ DEF_INST( vector_fp_perform_sign_operation )
             op2.v[FLOAT128_HI] |= 0x8000000000000000ULL;
             break;
         case 2:  // Positive
-            op2.v[FLOAT128_HI] &= 0x7FFFFFFFFFFFFFFFULL;
+            op2.v[FLOAT128_HI] &= ~0x8000000000000000ULL;
             break;
         }
 
-        VECTOR_PUT_FLOAT128_NOCC( op2, v1, 0, regs );
+        VECTOR_PUT_FLOAT128_NOCC( op2, v1, regs );
     }
 
 #undef M4_SE
@@ -7660,7 +7699,7 @@ DEF_INST( vector_fp_square_root )
     {
         float128_t  op1, op2;
 
-        VECTOR_GET_FLOAT128_OP( op2, v2, 0, regs );
+        VECTOR_GET_FLOAT128_OP( op2, v2, regs );
 
         softfloat_exceptionFlags = 0;
         SET_SF_RM_FROM_FPC;
@@ -7673,7 +7712,7 @@ DEF_INST( vector_fp_square_root )
             IEEE_EXCEPTION_TEST_TRAPS( regs, ieee_trap_conds, FPC_MASK_IMX );
         }
 
-        VECTOR_PUT_FLOAT128_NOCC( op1, v1, 0, regs );
+        VECTOR_PUT_FLOAT128_NOCC( op1, v1, regs );
 
         VECTOR_IEEE_EXCEPTION_TRAP( 0, regs, ieee_trap_conds, FPC_MASK_IMX );
         SET_FPC_FLAGS_FROM_SF( regs );
@@ -7792,8 +7831,8 @@ DEF_INST( vector_fp_subtract )
     {
         float128_t  op1, op2, op3;
 
-        VECTOR_GET_FLOAT128_OP( op3, v3, 0, regs );
-        VECTOR_GET_FLOAT128_OP( op2, v2, 0, regs );
+        VECTOR_GET_FLOAT128_OP( op3, v3, regs );
+        VECTOR_GET_FLOAT128_OP( op2, v2, regs );
 
         softfloat_exceptionFlags = 0;
         SET_SF_RM_FROM_FPC;
@@ -7811,7 +7850,7 @@ DEF_INST( vector_fp_subtract )
                     SCALE_FACTOR_ARITH_UFLOW_EXTD );
         }
 
-        VECTOR_PUT_FLOAT128_NOCC( op1, v1, 0, regs );
+        VECTOR_PUT_FLOAT128_NOCC( op1, v1, regs );
 
         VECTOR_IEEE_EXCEPTION_TRAP( 0, regs, ieee_trap_conds,
             FPC_MASK_IMO | FPC_MASK_IMU | FPC_MASK_IMX );
@@ -7930,8 +7969,8 @@ DEF_INST( vector_fp_add )
     {
         float128_t  op1, op2, op3;
 
-        VECTOR_GET_FLOAT128_OP( op3, v3, 0, regs );
-        VECTOR_GET_FLOAT128_OP( op2, v2, 0, regs );
+        VECTOR_GET_FLOAT128_OP( op3, v3, regs );
+        VECTOR_GET_FLOAT128_OP( op2, v2, regs );
 
         softfloat_exceptionFlags = 0;
         SET_SF_RM_FROM_FPC;
@@ -7950,7 +7989,7 @@ DEF_INST( vector_fp_add )
                     SCALE_FACTOR_ARITH_UFLOW_EXTD );
         }
 
-        VECTOR_PUT_FLOAT128_NOCC( op1, v1, 0, regs );
+        VECTOR_PUT_FLOAT128_NOCC( op1, v1, regs );
 
         VECTOR_IEEE_EXCEPTION_TRAP( 0, regs, ieee_trap_conds,
             FPC_MASK_IMO | FPC_MASK_IMU | FPC_MASK_IMX );
@@ -8073,8 +8112,8 @@ DEF_INST( vector_fp_divide )
     {
         float128_t  op1, op2, op3;
 
-        VECTOR_GET_FLOAT128_OP( op3, v3, 0, regs );
-        VECTOR_GET_FLOAT128_OP( op2, v2, 0, regs );
+        VECTOR_GET_FLOAT128_OP( op3, v3, regs );
+        VECTOR_GET_FLOAT128_OP( op2, v2, regs );
 
         softfloat_exceptionFlags = 0;
         SET_SF_RM_FROM_FPC;
@@ -8094,7 +8133,7 @@ DEF_INST( vector_fp_divide )
                     SCALE_FACTOR_ARITH_UFLOW_EXTD );
         }
 
-        VECTOR_PUT_FLOAT128_NOCC( op1, v1, 0, regs );
+        VECTOR_PUT_FLOAT128_NOCC( op1, v1, regs );
 
         VECTOR_IEEE_EXCEPTION_TRAP( 0, regs, ieee_trap_conds,
             FPC_MASK_IMO | FPC_MASK_IMU | FPC_MASK_IMX );
@@ -8213,8 +8252,8 @@ DEF_INST( vector_fp_multiply )
     {
         float128_t  op1, op2, op3;
 
-        VECTOR_GET_FLOAT128_OP( op3, v3, 0, regs );
-        VECTOR_GET_FLOAT128_OP( op2, v2, 0, regs );
+        VECTOR_GET_FLOAT128_OP( op3, v3, regs );
+        VECTOR_GET_FLOAT128_OP( op2, v2, regs );
 
         softfloat_exceptionFlags = 0;
         SET_SF_RM_FROM_FPC;
@@ -8232,7 +8271,7 @@ DEF_INST( vector_fp_multiply )
                     SCALE_FACTOR_ARITH_UFLOW_EXTD );
         }
 
-        VECTOR_PUT_FLOAT128_NOCC( op1, v1, 0, regs );
+        VECTOR_PUT_FLOAT128_NOCC( op1, v1, regs );
 
         VECTOR_IEEE_EXCEPTION_TRAP( 0, regs, ieee_trap_conds,
             FPC_MASK_IMO | FPC_MASK_IMU | FPC_MASK_IMX );
@@ -8377,8 +8416,8 @@ DEF_INST( vector_fp_compare_equal )
     {
         float128_t  op2, op3;
 
-        VECTOR_GET_FLOAT128_OP( op3, v3, 0, regs );
-        VECTOR_GET_FLOAT128_OP( op2, v2, 0, regs );
+        VECTOR_GET_FLOAT128_OP( op3, v3, regs );
+        VECTOR_GET_FLOAT128_OP( op2, v2, regs );
 
         softfloat_exceptionFlags = 0;
         newcc = FLOAT128_COMPARE( op2, op3 );
@@ -8397,14 +8436,14 @@ DEF_INST( vector_fp_compare_equal )
         if (newcc == 0)
         {
             equal_found = TRUE;
-            regs->VR_D( v1, 0) = 0xFFFFFFFFFFFFFFFFULL;
-            regs->VR_D( v1, 1) = 0xFFFFFFFFFFFFFFFFULL;
+            regs->VR_Q( v1 ).d[0] = 0xFFFFFFFFFFFFFFFFULL;
+            regs->VR_Q( v1 ).d[1] = 0xFFFFFFFFFFFFFFFFULL;
         }
         else
         {
             not_equal_or_unordered_found = TRUE;
-            regs->VR_D( v1, 0) = 0x0000000000000000ULL;
-            regs->VR_D( v1, 1) = 0x0000000000000000ULL;
+            regs->VR_Q( v1 ).d[0] = 0x0000000000000000ULL;
+            regs->VR_Q( v1 ).d[1] = 0x0000000000000000ULL;
         }
     }
 
@@ -8571,8 +8610,8 @@ DEF_INST( vector_fp_compare_high_or_equal )
     {
         float128_t  op2, op3;
 
-        VECTOR_GET_FLOAT128_OP( op3, v3, 0, regs );
-        VECTOR_GET_FLOAT128_OP( op2, v2, 0, regs );
+        VECTOR_GET_FLOAT128_OP( op3, v3, regs );
+        VECTOR_GET_FLOAT128_OP( op2, v2, regs );
 
         softfloat_exceptionFlags = 0;
         newcc = FLOAT128_COMPARE( op2, op3 );
@@ -8591,14 +8630,14 @@ DEF_INST( vector_fp_compare_high_or_equal )
         if (newcc == 0 || newcc == 2)
         {
             greater_than_or_equal_found = TRUE;
-            regs->VR_D( v1, 0 ) = 0xFFFFFFFFFFFFFFFFULL;
-            regs->VR_D( v1, 1 ) = 0xFFFFFFFFFFFFFFFFULL;
+            regs->VR_Q( v1 ).d[0] = 0xFFFFFFFFFFFFFFFFULL;
+            regs->VR_Q( v1 ).d[1] = 0xFFFFFFFFFFFFFFFFULL;
         }
         else
         {
             less_than_or_unordered_found = TRUE;
-            regs->VR_D( v1, 0 ) = 0x0000000000000000ULL;
-            regs->VR_D( v1, 1 ) = 0x0000000000000000ULL;
+            regs->VR_Q( v1 ).d[0] = 0x0000000000000000ULL;
+            regs->VR_Q( v1 ).d[1] = 0x0000000000000000ULL;
         }
     }
 
@@ -8767,8 +8806,8 @@ DEF_INST( vector_fp_compare_high )
     {
         float128_t  op2, op3;
 
-        VECTOR_GET_FLOAT128_OP( op3, v3, 0, regs );
-        VECTOR_GET_FLOAT128_OP( op2, v2, 0, regs );
+        VECTOR_GET_FLOAT128_OP( op3, v3, regs );
+        VECTOR_GET_FLOAT128_OP( op2, v2, regs );
 
         softfloat_exceptionFlags = 0;
         newcc = FLOAT128_COMPARE( op2, op3 );
@@ -8787,14 +8826,14 @@ DEF_INST( vector_fp_compare_high )
         if (newcc == 2)
         {
             greater_than_found = TRUE;
-            regs->VR_D( v1, 0 ) = 0xFFFFFFFFFFFFFFFFULL;
-            regs->VR_D( v1, 1 ) = 0xFFFFFFFFFFFFFFFFULL;
+            regs->VR_Q( v1 ).d[0] = 0xFFFFFFFFFFFFFFFFULL;
+            regs->VR_Q( v1 ).d[1] = 0xFFFFFFFFFFFFFFFFULL;
         }
         else
         {
             not_greater_than_or_unordered_found = TRUE;
-            regs->VR_D( v1, 0 ) = 0x0000000000000000ULL;
-            regs->VR_D( v1, 1 ) = 0x0000000000000000ULL;
+            regs->VR_Q( v1 ).d[0] = 0x0000000000000000ULL;
+            regs->VR_Q( v1 ).d[1] = 0x0000000000000000ULL;
         }
     }
 
@@ -8838,7 +8877,6 @@ DEF_INST( vector_fp_compare_high )
 /*   WFMINXB V1,V2,V3,M6  VFMIN V1,V2,V3,4,8,M6                      */
 /*                                                                   */
 /*-------------------------------------------------------------------*/
-// FixMe!  Add vector_fp_minimum to tables
 DEF_INST( vector_fp_minimum )
 {
     int     v1, v2, v3, m4, m5, m6;
@@ -8848,9 +8886,8 @@ DEF_INST( vector_fp_minimum )
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
+
+    /* FixMe! Investigate how to implement this instruction! */
     if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
 
 
@@ -8863,9 +8900,7 @@ DEF_INST( vector_fp_minimum )
             ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
     }
     else
-    {
         ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    }
 
     if ( m4 == 3 )  // Long format
     {
@@ -8878,11 +8913,10 @@ DEF_INST( vector_fp_minimum )
                 VECTOR_GET_FLOAT64_OP( op3, v3, i, regs );
                 VECTOR_GET_FLOAT64_OP( op2, v2, i, regs );
 
-/* !!!! */
-                softfloat_exceptionFlags = 0;
+                /* FixMe! Write some code that implements this instruction! */
 
 
-                switch (m5)
+                switch (m6)
                 {
                 case 0:   // IEEE MinNum
                     break;
@@ -8907,7 +8941,6 @@ DEF_INST( vector_fp_minimum )
                 }
 
 
-
                 newcc = FLOAT64_COMPARE( op2, op3 );
                 if (newcc == 3)
                 {
@@ -8929,6 +8962,7 @@ DEF_INST( vector_fp_minimum )
                     VECTOR_PUT_FLOAT64_NOCC( op2, v1, i, regs );
                 }
 
+
             }
         }
     }
@@ -8943,7 +8977,7 @@ DEF_INST( vector_fp_minimum )
                 VECTOR_GET_FLOAT32_OP( op3, v3, i, regs );
                 VECTOR_GET_FLOAT32_OP( op2, v2, i, regs );
 
-/* !!!! */
+                /* FixMe! Write some code that implements this instruction! */
 
             }
         }
@@ -8952,18 +8986,16 @@ DEF_INST( vector_fp_minimum )
     {
         float128_t  op2, op3;
 
-        VECTOR_GET_FLOAT128_OP( op3, v3, 0, regs );
-        VECTOR_GET_FLOAT128_OP( op2, v2, 0, regs );
+        VECTOR_GET_FLOAT128_OP( op3, v3, regs );
+        VECTOR_GET_FLOAT128_OP( op2, v2, regs );
 
-/* !!!! */
+        /* FixMe! Write some code that implements this instruction! */
 
     }
 
 #undef M5_SE
 #undef M5_RE
 
-
-    //
     ZVECTOR_END( regs );
 }
 
@@ -8978,7 +9010,6 @@ DEF_INST( vector_fp_minimum )
 /*   WFMAXXB V1,V2,V3,M6  VFMAX V1,V2,V3,4,8,M6                      */
 /*                                                                   */
 /*-------------------------------------------------------------------*/
-// FixMe!  Add vector_fp_maximum to tables
 DEF_INST( vector_fp_maximum )
 {
     int     v1, v2, v3, m4, m5, m6;
@@ -8987,9 +9018,8 @@ DEF_INST( vector_fp_maximum )
     VRR_C( inst, regs, v1, v2, v3, m4, m5, m6 );
 
     ZVECTOR_CHECK( regs );
-    //
-    // TODO: insert code here
-    //
+
+    /* FixMe! Investigate how to implement this instruction! */
     if (1) ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
 
 
@@ -9002,9 +9032,7 @@ DEF_INST( vector_fp_maximum )
             ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
     }
     else
-    {
         ARCH_DEP( program_interrupt )( regs, PGM_OPERATION_EXCEPTION );
-    }
 
     if ( m4 == 3 )  // Long format
     {
@@ -9017,8 +9045,10 @@ DEF_INST( vector_fp_maximum )
                 VECTOR_GET_FLOAT64_OP( op3, v3, i, regs );
                 VECTOR_GET_FLOAT64_OP( op2, v2, i, regs );
 
-/* !!!! */
-                switch (m5)
+                /* FixMe! Write some code that implements this instruction! */
+
+
+                switch (m6)
                 {
                 case 0:   // IEEE MaxNum
                     break;
@@ -9042,6 +9072,7 @@ DEF_INST( vector_fp_maximum )
                     break;
                 }
 
+
             }
         }
     }
@@ -9056,7 +9087,7 @@ DEF_INST( vector_fp_maximum )
                 VECTOR_GET_FLOAT32_OP( op3, v3, i, regs );
                 VECTOR_GET_FLOAT32_OP( op2, v2, i, regs );
 
-/* !!!! */
+                /* FixMe! Write some code that implements this instruction! */
 
             }
         }
@@ -9065,18 +9096,16 @@ DEF_INST( vector_fp_maximum )
     {
         float128_t  op2, op3;
 
-        VECTOR_GET_FLOAT128_OP( op3, v3, 0, regs );
-        VECTOR_GET_FLOAT128_OP( op2, v2, 0, regs );
+        VECTOR_GET_FLOAT128_OP( op3, v3, regs );
+        VECTOR_GET_FLOAT128_OP( op2, v2, regs );
 
-/* !!!! */
+        /* FixMe! Write some code that implements this instruction! */
 
     }
 
 #undef M5_SE
 #undef M5_RE
 
-
-    //
     ZVECTOR_END( regs );
 }
 

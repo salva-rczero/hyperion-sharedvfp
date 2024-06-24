@@ -224,7 +224,6 @@ OPCD_DLL_IMPORT int iprint_router_func( int arch_mode, BYTE inst[], char mnemoni
 /*-------------------------------------------------------------------*/
 /*               Individual instruction counting                     */
 /*-------------------------------------------------------------------*/
-            /* gettimeofday(&sysblk.start_time, NULL);  */          
 
 #if defined( OPTION_INSTR_COUNT_AND_TIME )
 
@@ -234,7 +233,7 @@ OPCD_DLL_IMPORT int iprint_router_func( int arch_mode, BYTE inst[], char mnemoni
         if (sysblk.icount)                                          \
         {                                                           \
             U64 used;                                               \
-            QueryPerformanceCounter(&(_regs)->ticks);               \
+            gettimeofday(&sysblk.start_time, NULL);                 \
             switch ((_inst)[0]) {                                   \
             case 0x01:                                              \
                 used = sysblk.imaps.imap01[(_inst)[1]]++;           \
@@ -319,23 +318,20 @@ OPCD_DLL_IMPORT int iprint_router_func( int arch_mode, BYTE inst[], char mnemoni
 #endif // defined( OPTION_INSTR_COUNT_AND_TIME )
 
 #if defined( OPTION_INSTR_COUNT_AND_TIME )
-            /*                                                      \
-            struct timeval end_time;                                \
-            struct timeval dur;                                     \
-            gettimeofday(&end_time, NULL);                          \
-            timeval_subtract(&sysblk.start_time, &end_time, &dur);  \
-            elapsed_usecs = (dur.tv_sec * 1000000) + dur.tv_usec; */ 
 
 #define END_COUNT_INSTR(_inst, _regs)                               \
     do                                                              \
     {                                                               \
         if (sysblk.icount)                                          \
         {                                                           \
+            struct timeval end_time;                                \
+            struct timeval dur;                                     \
             U64 elapsed_usecs;                                      \
-            LARGE_INTEGER ticks;                                    \
                                                                     \
-            QueryPerformanceCounter(&ticks);                        \
-            elapsed_usecs = ticks.QuadPart - (_regs)->ticks.QuadPart; \
+            gettimeofday(&end_time, NULL);                          \
+            timeval_subtract(&sysblk.start_time, &end_time, &dur);  \
+            elapsed_usecs = (dur.tv_sec * 1000000) + dur.tv_usec;   \
+                                                                    \
             switch ((_inst)[0]) {                                   \
             case 0x01:                                              \
                 sysblk.imaps.imap01T[(_inst)[1]]+=elapsed_usecs;    \
@@ -2105,19 +2101,49 @@ do {                                                                  \
 /*-------------------------------------------------------------------*/
 #if defined( _FEATURE_129_ZVECTOR_FACILITY )
 
-    /* Program check if vector instructions is executed when         */
-    /* TXF constraint mode or VOP control is zero                    */
+    /* Program check if vector instructions are executed when TXF    */
+    /* constraint mode, or if the vector enablement control (bit     */
+    /* 46) and the AFP control (bit 45) in control register zero     */
+    /* are not set to one.                                           */
 
-#define ZVECTOR_CHECK(_regs) \
-        TXF_INSTR_CHECK(_regs); \
-        if (sysblk.vrtrace && inst[5] != (U8) 0x3E && inst[5] != (U8) 0x36) \
-            ARCH_DEP(display_inst) (_regs, inst); \
-        if( !((_regs)->CR(0) & CR0_VOP) ) { \
-            (_regs)->dxc = DXC_VECTOR_INSTRUCTION; \
-            (_regs)->program_interrupt( (_regs), PGM_DATA_EXCEPTION); \
+  #if defined( _FEATURE_SIE )
+
+    #define ZVECTOR_CHECK(_regs)                                               \
+        TXF_INSTR_CHECK(_regs);                                                \
+        if (sysblk.vrtrace && inst[5] != (U8) 0x3E && inst[5] != (U8) 0x36)    \
+            ARCH_DEP(display_inst) (_regs, inst);                              \
+        if (0                                                                  \
+            || !((_regs)->CR(0) & CR0_VOP)                                     \
+            || !((_regs)->CR(0) & CR0_AFP)                                     \
+            || (SIE_MODE((_regs)) && (0                                        \
+                                      || !(HOST(_regs)->CR(0) & CR0_VOP)       \
+                                      || !(HOST(_regs)->CR(0) & CR0_AFP)))     \
+        )                                                                      \
+        {                                                                      \
+            (_regs)->dxc = DXC_VECTOR_INSTRUCTION;                             \
+            (_regs)->program_interrupt( (_regs), PGM_DATA_EXCEPTION);          \
         }
+
+  #else /* !defined( _FEATURE_SIE ) */
+
+    #define ZVECTOR_CHECK(_regs)                                               \
+        TXF_INSTR_CHECK(_regs);                                                \
+        if (sysblk.vrtrace && inst[5] != (U8) 0x3E && inst[5] != (U8) 0x36)    \
+            ARCH_DEP(display_inst) (_regs, inst);                              \
+        if (0                                                                  \
+            || !((_regs)->CR(0) & CR0_VOP)                                     \
+            || !((_regs)->CR(0) & CR0_AFP)                                     \
+        )                                                                      \
+        {                                                                      \
+            (_regs)->dxc = DXC_VECTOR_INSTRUCTION;                             \
+            (_regs)->program_interrupt( (_regs), PGM_DATA_EXCEPTION);          \
+        }
+
+  #endif /* !defined( _FEATURE_SIE ) */
+
     /* Debug end of vector instruction execution                     */
-#define ZVECTOR_END(_regs) \
+
+    #define ZVECTOR_END(_regs) \
         if (sysblk.vrtrace && inst[5] != (U8) 0x3E && inst[5] != (U8) 0x36) \
             ARCH_DEP(display_inst) (_regs, inst);
 
@@ -3706,7 +3732,7 @@ DEF_INST( vector_load_rightmost_with_length );
 DEF_INST( vector_load_rightmost_with_length_reg );
 DEF_INST( vector_multiply_and_shift_decimal );
 DEF_INST( vector_multiply_decimal );
-DEF_INST( vector_pack_zoned );
+DEF_INST( vector_packed_zoned );
 DEF_INST( vector_perform_sign_operation_decimal );
 DEF_INST( vector_remainder_decimal );
 DEF_INST( vector_shift_and_divide_decimal );

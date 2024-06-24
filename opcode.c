@@ -829,7 +829,7 @@ DISABLE_GCC_UNUSED_FUNCTION_WARNING;
      UNDEF_INST(vector_load_rightmost_with_length_reg)
      UNDEF_INST(vector_multiply_and_shift_decimal)
      UNDEF_INST(vector_multiply_decimal)
-     UNDEF_INST(vector_pack_zoned)
+     UNDEF_INST(vector_packed_zoned)
      UNDEF_INST(vector_perform_sign_operation_decimal)
      UNDEF_INST(vector_remainder_decimal)
      UNDEF_INST(vector_shift_and_divide_decimal)
@@ -2139,7 +2139,7 @@ static INSTR_FUNC ARCH_DEP( gen_opcode_e6xx )[256][NUM_INSTR_TAB_PTRS] =
  /*E631*/ AD_GENx___x___x___ ,
  /*E632*/ AD_GENx___x___x___ ,
  /*E633*/ AD_GENx___x___x___ ,
- /*E634*/ AD_GENx___x___x900 ("VPKZ"     , VSI    , ASMFMT_VSI    , vector_pack_zoned                                     ),
+ /*E634*/ AD_GENx___x___x900 ("VPKZ"     , VSI    , ASMFMT_VSI    , vector_packed_zoned                                   ),
  /*E635*/ AD_GENx___x___x900 ("VLRL"     , VSI    , ASMFMT_VSI    , vector_load_rightmost_with_length                     ),
  /*E636*/ AD_GENx___x___x___ ,
  /*E637*/ AD_GENx___x___x900 ("VLRLR"    , VRS_D  , ASMFMT_VRS_D  , vector_load_rightmost_with_length_reg                 ),

@@ -519,7 +519,7 @@ test27   vlm   v2,v7,data27
          vst   v1,have27+16
          clc   have27,must27
          jne   failure
-         j     success
+         j     test28
 data27   dc    cl16'zvector hercules'
          dc    cl16'hercules'
          dc    x'0000000000000008',x'78695a4b3c2d1e0a'
@@ -529,5 +529,24 @@ data27   dc    cl16'zvector hercules'
 have27   ds    xl32
 must27   dc    x'0000000000000008',x'0000000000000000'
          dc    x'0000000000000007',x'0000000000000000'
+*- VLEI* --------------------------------------------------------------
+test28   vlm   v0,v3,data28
+         vleib v0,-3,7
+         vleih v1,-3,3
+         vleif v2,-3,1
+         vleig v3,-3,0
+         vstm  v0,v3,have28
+         clc   have28,must28
+         jne   failure
+         j     success
+data28   dc    x'0000000000000008',x'0000000000000000'
+         dc    x'0100000000000008',x'0000000000000000'
+         dc    x'0200000000000008',x'0000000000000000'
+         dc    x'0300000000000008',x'0000000000000000'
+have28   ds    xl64
+must28   dc    x'00000000000000fd',x'0000000000000000'
+         dc    x'010000000000fffd',x'0000000000000000'
+         dc    x'02000000fffffffd',x'0000000000000000'
+         dc    x'fffffffffffffffd',x'0000000000000000'
 *----------------------------------------------------------------------
          end

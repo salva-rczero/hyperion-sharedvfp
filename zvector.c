@@ -487,16 +487,14 @@ DEF_INST( vector_load_vr_element_from_gr )
 
     ZVECTOR_CHECK( regs );
 
-    if (m4 > 3 || d2 > (1 << m4)) /* m4 > elems or m4 > 3 => Specification excp */
-        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
-
     switch (m4)
     {
-    case 0: VR_UB( v1, d2 ) = regs->GR_LHLCL( r3 ); break;
-    case 1: VR_UH( v1, d2 ) = regs->GR_LHL  ( r3 ); break;
-    case 2: VR_UF( v1, d2 ) = regs->GR_L    ( r3 ); break;
-    case 3: VR_UD( v1, d2 ) = regs->GR_G    ( r3 ); break;
+    case 0: if (d2 < 16) VR_UB( v1, d2 ) = regs->GR_LHLCL( r3 ); break;
+    case 1: if (d2 <  8) VR_UH( v1, d2 ) = regs->GR_LHL  ( r3 ); break;
+    case 2: if (d2 <  4) VR_UF( v1, d2 ) = regs->GR_L    ( r3 ); break;
+    case 3: if (d2 <  2) VR_UD( v1, d2 ) = regs->GR_G    ( r3 ); break;
     default:
+        ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
         break;
     }
 
@@ -543,25 +541,27 @@ DEF_INST( vector_element_shift_left )
 
     ZVECTOR_CHECK( regs );
 
+    shift = effective_addr2 & 0xFFF;  // Isolate number of bit positions
+
     switch (m4)
     {
     case 0:
-        shift = b2 % 8;
+        shift %= 8;
         for (i=0; i < 16; i++)
             VR_UB( v1, i ) = VR_UB( v3, i ) << shift;
         break;
     case 1:
-        shift = b2 % 16;
+        shift %= 16;
         for (i=0; i < 8; i++)
-            VR_UH( v1, i ) = VR_UB( v3, i ) << shift;
+            VR_UH( v1, i ) = VR_UH( v3, i ) << shift;
         break;
     case 2:
-        shift = b2 % 32;
+        shift %= 32;
         for (i=0; i < 4; i++)
             VR_UF( v1, i ) = VR_UF( v3, i ) << shift;
         break;
     case 3:
-        shift = b2 % 64;
+        shift %= 64;
         for (i=0; i < 2; i++)
             VR_UD( v1, i ) = VR_UD( v3, i ) << shift;
         break;
@@ -584,29 +584,31 @@ DEF_INST( vector_element_rotate_left_logical )
     VRS_A( inst, regs, v1, v3, b2, effective_addr2, m4 );
 
     ZVECTOR_CHECK( regs );
+    
+    rotl = effective_addr2 & 0xFFF;  // Isolate number of bit positions
 
     switch (m4)
     {
     case 0:
-        rotl = b2 % 8;
+        rotl %= 8;
         rotr = -rotl & 7;
         for (i=0; i < 16; i++)
             VR_UB( v1, i ) = (VR_UB( v3, i ) << rotl) | (VR_UB( v3, i ) >> rotr);
         break;
     case 1:
-        rotl = b2 % 16;
+        rotl %= 16;
         rotr = -rotl & 15;
         for (i=0; i < 8; i++)
             VR_UH( v1, i ) = (VR_UH( v3, i ) << rotl) | (VR_UH( v3, i ) >> rotr);
         break;
     case 2:
-        rotl = b2 % 32;
+        rotl %= 32;
         rotr = -rotl & 31;
         for (i=0; i < 4; i++)
             VR_UF( v1, i ) = (VR_UF( v3, i ) << rotl) | (VR_UF( v3, i ) >> rotr);
         break;
     case 3:
-        rotl = b2 % 64;
+        rotl %= 64;
         rotr = -rotl & 63;
         for (i=0; i < 2; i++)
             VR_UD( v1, i ) = (VR_UD( v3, i ) << rotl) | (VR_UD( v3, i ) >> rotr);
@@ -685,25 +687,27 @@ DEF_INST( vector_element_shift_right_logical )
 
     ZVECTOR_CHECK( regs );
 
+    shift = effective_addr2 & 0xFFF;  // Isolate number of bit positions
+    
     switch (m4)
     {
     case 0:
-        shift = b2 % 8;
+        shift %= 8;
         for (i=0; i < 16; i++)
             VR_UB( v1, i ) = VR_UB( v3, i ) >> shift;
         break;
     case 1:
-        shift = b2 % 16;
+        shift %= 16;
         for (i=0; i < 8; i++)
             VR_UH( v1, i ) = VR_UH( v3, i ) >> shift;
         break;
     case 2:
-        shift = b2 % 32;
+        shift %= 32;
         for (i=0; i < 4; i++)
             VR_UF( v1, i ) = VR_UF( v3, i ) >> shift;
         break;
     case 3:
-        shift = b2 % 64;
+        shift %= 64;
         for (i=0; i < 2; i++)
             VR_UD( v1, i ) = VR_UD( v3, i ) >> shift;
         break;
@@ -727,25 +731,27 @@ DEF_INST( vector_element_shift_right_arithmetic )
 
     ZVECTOR_CHECK( regs );
 
+    shift = effective_addr2 & 0xFFF;  // Isolate number of bit positions
+
     switch (m4)
     {
     case 0:
-        shift = b2 % 8;
+        shift %= 8;
         for (i=0; i < 16; i++)
             VR_SB(v1, i) = VR_SB(v3, i) >> shift;
         break;
     case 1:
-        shift = b2 % 16;
+        shift %= 16;
         for (i=0; i < 8; i++)
             VR_SH(v1, i) = VR_SH(v3, i) >> shift;
         break;
     case 2:
-        shift = b2 % 32;
+        shift %= 32;
         for (i=0; i < 4; i++)
             VR_SF(v1, i) = VR_SF(v3, i) >> shift;
         break;
     case 3:
-        shift = b2 % 64;
+        shift %= 64;
         for (i=0; i < 2; i++)
             VR_SD(v1, i) = VR_SD(v3, i) >> shift;
         break;
@@ -862,6 +868,9 @@ DEF_INST( vector_load_element_immediate_64 )
     if (m3 > 1)
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
 
+    if (i2 & 0x8000)
+        i2 |= 0xffff0000;
+
     VR_SD(v1, m3) = (S64) i2;
 
     ZVECTOR_END( regs );
@@ -880,6 +889,9 @@ DEF_INST( vector_load_element_immediate_32 )
 
     if (m3 > 3)
         ARCH_DEP( program_interrupt )( regs, PGM_SPECIFICATION_EXCEPTION );
+
+    if (i2 & 0x8000)
+        i2 |= 0xffff0000;
 
     VR_SF(v1, m3) = i2;
 
@@ -915,6 +927,9 @@ DEF_INST( vector_replicate_immediate )
     VRI_A( inst, regs, v1, i2, m3 );
 
     ZVECTOR_CHECK( regs );
+
+    if (i2 & 0x8000)
+        i2 |= 0xffff0000;
 
     switch (m3)
     {
